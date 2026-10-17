@@ -185,6 +185,16 @@ class CLITest < Minitest::Test
     end
   end
 
+  def test_help_shows_the_logo_on_a_terminal_only
+    _, piped = cli("help")
+    assert_equal Stockbar::CLI::HELP, piped
+
+    out = FakeTerminal.new
+    Stockbar::CLI.new(["--help"], out: out).run
+    assert_includes out.string, Stockbar::Banner::BYLINE
+    assert out.string.end_with?(Stockbar::CLI::HELP)
+  end
+
   def test_unknown_command
     status, _, err = cli("frobnicate")
     assert_equal 1, status

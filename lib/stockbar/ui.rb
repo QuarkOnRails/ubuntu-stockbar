@@ -26,6 +26,7 @@ module Stockbar
 
     def initialize(out:, source:, on_change:, notice: nil)
       @prompt = self.class.prompt(out)
+      @banner = Banner::Live.new(out)
       @out = out
       @source = source
       @on_change = on_change
@@ -34,26 +35,32 @@ module Stockbar
 
     def run
       @config = Config.load
-      refresh
-      loop do
-        draw
-        action = main_menu
-        break if action == :quit
+      @banner.run do
+        refresh
+        loop do
+          draw
+          action = main_menu
+          break if action == :quit
 
-        begin
-          send(action)
-        rescue Error => e
-          @notice = Table.paint("⚠ #{e.message}", :yellow)
+          begin
+            send(action)
+          rescue Error => e
+            @notice = Table.paint("⚠ #{e.message}", :yellow)
+          end
+          @config = Config.load
         end
-        @config = Config.load
       end
     end
 
     private
 
     def draw
-      @out.print "\e[H\e[2J"
-      @out.puts "#{Table.paint('Stockbar', :bold)} #{Table.paint('· watchlist for your top bar', :dim)}"
+      if @banner.pinned?
+        @out.print @banner.clear_content
+      else
+        @out.print "\e[H\e[2J"
+        @out.puts "#{Table.paint('Stockbar', :bold)} #{Table.paint('· watchlist for your top bar', :dim)}"
+      end
       @out.puts
       if @config.stocks.empty?
         @out.puts "Your watchlist is empty. Choose “Add a stock” to start."
@@ -94,7 +101,7 @@ module Stockbar
         choice
       end
       choices << { name: "← Cancel", value: :cancel }
-      picked = @prompt.select("Pick one:", choices, **LIST_OPTIONS)
+      picked = @prompt.select("Pick one:", choices, **list_options)
       return if picked == :cancel
 
       first_pin = @config.stocks.none?(&:pinned)
@@ -104,7 +111,7 @@ module Stockbar
     end
 
     def remove
-      symbols = @prompt.multi_select("Remove which? (space marks, enter confirms)", stock_choices, **LIST_OPTIONS)
+      symbols = @prompt.multi_select("Remove which? (space marks, enter confirms)", stock_choices, **list_options)
       return if symbols.empty?
 
       symbols.each { |symbol| @config.remove(symbol) }
@@ -115,19 +122,19 @@ module Stockbar
       # tty-prompt defaults are 1-based positions
       pinned = @config.stocks.each.with_index(1).filter_map { |stock, position| position if stock.pinned }
       symbols = @prompt.multi_select("Show in the top bar: (space toggles, enter confirms)", stock_choices,
-                                     default: pinned, **LIST_OPTIONS)
+                                     default: pinned, **list_options)
       @config.pinned_symbols = symbols
       save_and_refresh
     end
 
     def reorder
-      symbol = @prompt.select("Move which stock?", stock_choices, **LIST_OPTIONS)
+      symbol = @prompt.select("Move which stock?", stock_choices, **list_options)
       current = @config.symbols.index(symbol)
       positions = @config.symbols.each_with_index.map do |other, i|
         { name: "#{i + 1}. #{other}#{' ← now' if i == current}", value: i }
       end
       # 1-based, same as choose_pinned's defaults
-      index = @prompt.select("Move #{symbol} to:", positions, default: current + 1, **LIST_OPTIONS)
+      index = @prompt.select("Move #{symbol} to:", positions, default: current + 1, **list_options)
       @config.move(symbol, index)
       save_and_refresh
     end
@@ -151,6 +158,14 @@ module Stockbar
       refresh
       @on_change.call
       @notice = message
+    end
+
+    # tty-prompt redraws a list by moving the cursor up, which stops at the banner, so the list has to fit
+    # under it. 3 rows for the question, which can wrap
+    def list_options
+      return LIST_OPTIONS unless @banner.pinned?
+
+      LIST_OPTIONS.merge(per_page: [LIST_OPTIONS[:per_page], @banner.content_rows - 3].min)
     end
 
     def stock_choices

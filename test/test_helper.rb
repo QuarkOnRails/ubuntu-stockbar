@@ -74,6 +74,17 @@ class FakeHTTP
   end
 end
 
+class FakeTerminal < StringIO
+  attr_reader :winsize
+
+  def initialize(rows: 24, cols: 80)
+    super()
+    @winsize = [rows, cols]
+  end
+
+  def tty? = true
+end
+
 class FakeRunner
   attr_reader :commands
 

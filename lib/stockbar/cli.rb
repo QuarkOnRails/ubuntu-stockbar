@@ -53,7 +53,7 @@ module Stockbar
       when "enable" then enable
       when "disable" then disable
       when "daemon" then Daemon.new(out: @out).run
-      when "help", "-h", "--help" then @out.puts HELP
+      when "help", "-h", "--help" then help
       when "version", "-v", "--version" then @out.puts VERSION
       else raise Error, "unknown command \"#{command}\" (see: stockbar help)"
       end
@@ -72,6 +72,11 @@ module Stockbar
       require_relative "ui"
       notice = first_use(Config.load).join("\n")
       UI.new(out: @out, source: @source, on_change: @on_change, notice: notice.empty? ? nil : notice).run
+    end
+
+    def help
+      @out.puts Banner.static(color: color?), "" if @out.tty? && @out.winsize[1] >= Banner::WIDTH
+      @out.puts HELP
     end
 
     def list

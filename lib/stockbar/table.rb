@@ -3,7 +3,7 @@
 module Stockbar
   # hand-rolled so list and search run without gems
   class Table
-    STYLES = { bold: 1, dim: 2, red: 31, green: 32, yellow: 33 }.freeze
+    STYLES = { bold: 1, dim: 2, red: 31, green: 32, yellow: 33, bright: 97 }.freeze
     # east asian wide characters take two terminal columns
     WIDE = /[\u1100-\u115F\u2E80-\uA4CF\uAC00-\uD7A3\uF900-\uFAFF\uFE30-\uFE4F\uFF00-\uFF60\uFFE0-\uFFE6]/
 
