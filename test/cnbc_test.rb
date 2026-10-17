@@ -70,6 +70,13 @@ class CNBCTest < Minitest::Test
     assert_equal "novo nordisk", @http.requests.first[1][:prefix]
   end
 
+  def test_search_puts_well_known_names_first
+    funds = [{ "symbolName" => "SP500E-CH" }, { "symbolName" => ".SPX" }]
+
+    assert_equal %w[.SPX SP500E-CH], cnbc { funds }.search("S&P 500").map(&:symbol)
+    assert_equal %w[.IXIC .NDX], cnbc { [] }.search("nasdaq").map(&:symbol)
+  end
+
   def test_search_failure_suggests_adding_by_ticker
     error = assert_raises(Stockbar::Error) { cnbc { Stockbar::HTTPError.new("HTTP 503") }.search("apple") }
     assert_match "add by ticker", error.message

@@ -9,6 +9,34 @@ module Stockbar
 
     Result = Struct.new(:quotes, :errors, keyword_init: true)
 
+    # the lookup only matches the start of a symbol or a name, so the usual ways of writing these
+    # ("sp500", "dow jones", "eurusd", "gold") miss them or find only lookalike funds
+    WELL_KNOWN = [
+      [".SPX", "S&P 500 Index", "INDEX", %w[sp500 sp snp500 snp spx]],
+      [".DJI", "Dow Jones Industrial Average", "INDEX", %w[dow dowjones djia dji]],
+      [".IXIC", "NASDAQ Composite", "INDEX", %w[nasdaq nasdaqcomposite ixic]],
+      [".NDX", "NASDAQ 100", "INDEX", %w[nasdaq nasdaq100 ndx]],
+      [".RUT", "Russell 2000", "INDEX", %w[russell russell2000 rut]],
+      [".VIX", "CBOE Volatility Index", "INDEX", %w[vix volatility]],
+      [".GDAXI", "DAX", "INDEX", %w[dax dax40 gdaxi]],
+      [".FTSE", "FTSE 100", "INDEX", %w[ftse ftse100]],
+      [".FCHI", "CAC 40", "INDEX", %w[cac cac40 fchi]],
+      [".STOXX50E", "Euro Stoxx 50", "INDEX", %w[eurostoxx eurostoxx50 stoxx50 sx5e]],
+      [".N225", "Nikkei 225", "INDEX", %w[nikkei nikkei225 n225]],
+      [".HSI", "Hang Seng Index", "INDEX", %w[hangseng hsi]],
+      ["EUR=", "EUR/USD", "CURRENCY", %w[eurusd]],
+      ["GBP=", "GBP/USD", "CURRENCY", %w[gbpusd]],
+      ["JPY=", "USD/JPY", "CURRENCY", %w[usdjpy]],
+      ["CHF=", "USD/CHF", "CURRENCY", %w[usdchf]],
+      ["BTC.CB=", "Bitcoin/USD Coinbase", "CRYPTO", %w[bitcoin btc btcusd]],
+      ["ETH.CB=", "Ethereum/USD Coinbase", "CRYPTO", %w[ethereum ether eth ethusd]],
+      ["@GC.1", "Gold futures", "COMMODITY", %w[gold xau xauusd]],
+      ["@SI.1", "Silver futures", "COMMODITY", %w[silver xag xagusd]],
+      ["@CL.1", "WTI crude oil futures", "COMMODITY", %w[oil crude crudeoil wti]],
+      ["@LCO.1", "Brent crude oil futures", "COMMODITY", %w[oil brent brentcrude]],
+      ["@NG.1", "Natural gas futures", "COMMODITY", %w[naturalgas natgas]]
+    ].map { |symbol, name, type, keys| [SearchResult.new(symbol: symbol, name: name, type: type), keys] }.freeze
+
     def initialize(http: HTTP.new)
       @http = http
     end
@@ -28,18 +56,25 @@ module Stockbar
 
     def search(query)
       rows = @http.get_json(SEARCH_URL, { prefix: query, partnerid: 20_064, output: "json" })
-      Array(rows).filter_map do |row|
+      found = Array(rows).filter_map do |row|
         # the first row is a match count summary, not a result
         next unless row["symbolName"]
 
         SearchResult.new(symbol: row["symbolName"], name: row["companyName"], exchange: row["exchangeName"],
                          type: row["issueType"])
       end
+      (well_known(query) + found).uniq(&:symbol)
     rescue HTTPError => e
       raise Error, "name search is unavailable right now (#{e.message}), add by ticker instead, e.g. AAPL or SAP-DE"
     end
 
     private
+
+    # spaces and punctuation don't count, "S&P 500" and "s&p-500" are both sp500
+    def well_known(query)
+      key = query.downcase.delete("^a-z0-9")
+      WELL_KNOWN.filter_map { |result, keys| result if keys.include?(key) }
+    end
 
     def lookup(symbols)
       data = @http.get_json(QUOTE_URL, { symbols: symbols.join("|"), requestMethod: "itv", noform: 1, partnerId: 2,

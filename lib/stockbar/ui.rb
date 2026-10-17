@@ -95,8 +95,9 @@ module Stockbar
 
       choices = results.map do |result|
         name = Formatter.truncate(result.name, Views::NAME_WIDTH).ljust(Views::NAME_WIDTH)
-        choice = { name: "#{result.symbol.ljust(SYMBOL_WIDTH)} #{name} #{result.exchange} · #{result.type}",
-                   value: result }
+        # CNBC::WELL_KNOWN results have no exchange
+        listing = [result.exchange, result.type].compact.join(" · ")
+        choice = { name: "#{result.symbol.ljust(SYMBOL_WIDTH)} #{name} #{listing}", value: result }
         choice[:disabled] = "(already added)" if @config.include?(result.symbol)
         choice
       end
