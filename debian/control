@@ -1,0 +1,31 @@
+Source: stockbar
+Section: gnome
+Priority: optional
+Maintainer: Quark On Rails <quarkXZ@proton.me>
+Build-Depends: debhelper-compat (= 13),
+               gnome-shell-common (>= 42),
+               rake,
+               ruby,
+               ruby-minitest
+Standards-Version: 4.6.0
+Homepage: https://github.com/QuarkOnRails/ubuntu-stockbar
+Vcs-Browser: https://github.com/QuarkOnRails/ubuntu-stockbar
+Vcs-Git: https://github.com/QuarkOnRails/ubuntu-stockbar.git
+Rules-Requires-Root: no
+
+Package: stockbar
+Architecture: all
+Depends: ca-certificates,
+         gnome-shell (>= 42),
+         ruby (>= 1:3.0~),
+         ${misc:Depends}
+Description: stock quotes in the GNOME top bar
+ Stockbar shows a watchlist of stocks, indices, currencies and crypto in the
+ GNOME Shell top bar, with the whole list and the last update in a dropdown.
+ .
+ The stockbar command manages the watchlist, either in an interactive editor
+ or with subcommands such as "stockbar add AAPL". A per-user background
+ service fetches the quotes from CNBC, which needs no account or API key.
+ .
+ The first change to the watchlist turns the extension and the service on;
+ log out and back in once after that.

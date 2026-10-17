@@ -1,0 +1,5 @@
+bin usr/share/stockbar
+lib usr/share/stockbar
+third_party usr/share/stockbar
+build/gnome-shell usr/share
+data/stockbar.service usr/lib/systemd/user

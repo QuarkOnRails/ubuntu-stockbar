@@ -1,0 +1,25 @@
+#!/usr/bin/make -f
+
+# legacy or modern extension, decided by the GNOME of the release this gets built for
+GNOME_MAJOR := $(shell dpkg-query -W -f='$${Version}' gnome-shell-common | sed -E 's/^([0-9]+).*/\1/')
+
+%:
+	dh $@
+
+override_dh_auto_build:
+	test -n "$(GNOME_MAJOR)"
+	rake extension GNOME_MAJOR=$(GNOME_MAJOR)
+
+override_dh_auto_test:
+ifeq (,$(filter nocheck,$(DEB_BUILD_OPTIONS)))
+	LC_ALL=C.UTF-8 rake test
+endif
+
+execute_after_dh_install:
+	install -D -m 755 debian/launcher.sh debian/stockbar/usr/bin/stockbar
+	sed -i '1s|.*|#!/usr/bin/ruby|' debian/stockbar/usr/share/stockbar/bin/stockbar
+	# their text is in debian/copyright, which the package ships as /usr/share/doc/stockbar/copyright
+	rm debian/stockbar/usr/share/stockbar/third_party/*/LICENSE.txt
+
+# `stockbar` turns the unit on per user at first use, the package shouldn't for every account
+override_dh_installsystemduser:

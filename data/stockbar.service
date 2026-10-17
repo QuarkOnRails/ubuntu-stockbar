@@ -1,0 +1,12 @@
+[Unit]
+Description=Stockbar stock quote fetcher
+PartOf=graphical-session.target
+After=graphical-session.target
+
+[Service]
+ExecStart=/usr/bin/stockbar daemon
+Restart=on-failure
+RestartSec=30
+
+[Install]
+WantedBy=graphical-session.target

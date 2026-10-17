@@ -1,0 +1,7 @@
+# a bare tar-ignore keeps the default excludes (.git etc.), the patterns alone would replace them
+tar-ignore
+tar-ignore = vendor
+tar-ignore = .bundle
+tar-ignore = build
+tar-ignore = .ruby-lsp
+tar-ignore = .idea

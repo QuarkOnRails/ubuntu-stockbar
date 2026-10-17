@@ -1,0 +1,54 @@
+.stockbar-box {
+    spacing: 14px;
+}
+
+.stockbar-label {
+    font-feature-settings: "tnum";
+}
+
+.stockbar-up {
+    color: #57e389;
+}
+
+.stockbar-down {
+    color: #ff7b72;
+}
+
+.stockbar-row {
+    spacing: 14px;
+}
+
+/* mid-tone colours, the menu can be light or dark */
+.stockbar-row .stockbar-up {
+    color: #26a269;
+}
+
+.stockbar-row .stockbar-down {
+    color: #e01b24;
+}
+
+.stockbar-menu-symbol {
+    font-weight: bold;
+    min-width: 72px;
+}
+
+.stockbar-menu-name {
+    min-width: 180px;
+}
+
+.stockbar-menu-change {
+    font-feature-settings: "tnum";
+    min-width: 150px;
+    text-align: right;
+}
+
+.stockbar-menu-price {
+    font-feature-settings: "tnum";
+    font-weight: bold;
+    min-width: 96px;
+    text-align: right;
+}
+
+.stockbar-status {
+    font-size: 0.9em;
+}

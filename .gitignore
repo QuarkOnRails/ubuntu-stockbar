@@ -1,0 +1,20 @@
+# test gems, bundle install puts them in vendor/bundle
+/.bundle/
+/vendor/
+
+# rake extension output
+/build/
+
+# dpkg-buildpackage leftovers
+/debian/stockbar/
+/debian/tmp/
+/debian/.debhelper/
+/debian/debhelper-build-stamp
+/debian/files
+/debian/*.substvars
+/debian/*.debhelper
+/debian/*.debhelper.log
+
+# editor state, the .iml pins a local ruby SDK
+/.idea/
+/.ruby-lsp/
