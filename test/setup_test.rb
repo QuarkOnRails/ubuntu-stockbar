@@ -29,12 +29,39 @@ class SetupTest < Minitest::Test
     end
   end
 
-  def test_turn_on_asks_for_a_relogin_until_the_shell_has_seen_the_extension
+  def test_relogin_is_needed_until_the_shell_has_seen_the_extension
     in_sandbox do
       install_package_extension
-      lines = setup_with(failing: [["gnome-extensions", "info", UUID]]).turn_on
+      enabled = { ENABLED_EXTENSIONS => "['#{UUID}']\n" }
 
-      assert_equal Setup::RELOGIN, lines.last
+      assert setup_with(failing: [SHELL_INFO], **enabled).relogin_needed?
+      refute setup_with(**enabled).relogin_needed?
+    end
+  end
+
+  def test_no_relogin_needed_while_the_extension_is_off
+    in_sandbox do
+      install_package_extension
+      refute setup_with(failing: [SHELL_INFO]).relogin_needed?
+      refute setup_with(failing: [SHELL_INFO], ENABLED_EXTENSIONS => nil).relogin_needed?
+    end
+  end
+
+  def test_no_relogin_needed_outside_gnome
+    in_sandbox do
+      install_package_extension
+      enabled = { ENABLED_EXTENSIONS => "['#{UUID}']\n" }
+      ["", "KDE", "XFCE"].each do |desktop|
+        ENV["XDG_CURRENT_DESKTOP"] = desktop
+        refute setup_with(failing: [SHELL_INFO], **enabled).relogin_needed?, desktop
+      end
+    end
+  end
+
+  def test_no_relogin_needed_without_the_package
+    in_sandbox do
+      refute setup_with(failing: [SHELL_INFO], ENABLED_EXTENSIONS => "['#{UUID}']\n").relogin_needed?
+      assert_empty @runner.commands
     end
   end
 

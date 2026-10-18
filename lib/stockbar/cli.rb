@@ -71,7 +71,8 @@ module Stockbar
     def interactive
       require_relative "ui"
       notice = first_use(Config.load).join("\n")
-      UI.new(out: @out, source: @source, on_change: @on_change, notice: notice.empty? ? nil : notice).run
+      UI.new(out: @out, source: @source, on_change: @on_change, notice: notice.empty? ? nil : notice,
+             warning: relogin_reminder).run
     end
 
     def help
@@ -146,11 +147,12 @@ module Stockbar
       config.save
       @on_change.call
       @out.puts "Quotes now refresh every #{config.refresh_interval} s."
-      first_use(config).each { |line| @out.puts line }
+      setup_notes(config)
     end
 
     def enable
       remember_setup_choice { @setup.enable }
+      remind_relogin
     end
 
     def disable
@@ -173,6 +175,7 @@ module Stockbar
       ]
       rows.each { |label, value| @out.puts "#{Table.paint(label.ljust(10), :bold, color?)} #{value}" }
       @setup.warnings.each { |line| @out.puts line }
+      remind_relogin
       Views.error_lines(data["errors"], color: color?).each { |line| @out.puts line } if data
     end
 
@@ -220,7 +223,12 @@ module Stockbar
       config.save
       @out.puts message
       warn_errors(update_and_notify(config).errors)
+      setup_notes(config)
+    end
+
+    def setup_notes(config)
       first_use(config).each { |line| @out.puts line }
+      remind_relogin
     end
 
     # after `apt install` nothing is on yet, so the first watchlist change (or editor start) turns the
@@ -235,6 +243,17 @@ module Stockbar
       config.setup_done = true
       config.save
       lines
+    end
+
+    # red and on every change until it's done: everyone skips the relogin, and the bar stays empty until then.
+    # after first_use, which is what switches the extension on
+    def relogin_reminder
+      Table.paint(Setup::RELOGIN, :red, color?) if @setup.relogin_needed?
+    end
+
+    def remind_relogin
+      reminder = relogin_reminder
+      @out.puts reminder if reminder
     end
 
     # fetch here so the bar updates right away, poke the daemon so its next round uses the new watchlist

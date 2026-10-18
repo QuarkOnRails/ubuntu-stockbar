@@ -32,7 +32,38 @@ class CLITest < Minitest::Test
 
       runner = fresh_install_runner
       cli("add", "EUR=", runner: runner)
-      assert_empty runner.commands
+      refute_includes runner.commands, START_SERVICE
+      assert_empty(runner.commands.select { |command| command[0, 2] == %w[gsettings set] })
+    end
+  end
+
+  def test_relogin_reminder_until_the_shell_has_seen_the_extension
+    in_sandbox do
+      install_package_extension
+      _, out = cli("add", "AAPL", runner: fresh_install_runner(failing: [SHELL_INFO]))
+      assert out.end_with?("✓ stockbar.service running\n#{Stockbar::Setup::RELOGIN}\n"), out
+
+      # what turn_on wrote to gsettings
+      enabled = { ENABLED_EXTENSIONS => "['#{Stockbar::UUID}']\n", IS_ENABLED => "enabled\n" }
+      _, out = cli("add", "EUR=", runner: fresh_install_runner(failing: [SHELL_INFO], **enabled))
+      assert out.end_with?("Added EUR= (EUR/USD).\n#{Stockbar::Setup::RELOGIN}\n"), out
+
+      _, out = cli("status", runner: fresh_install_runner(failing: [SHELL_INFO], **enabled))
+      assert_includes out, Stockbar::Setup::RELOGIN
+
+      _, out = cli("unpin", "EUR=", runner: fresh_install_runner(**enabled))
+      refute_includes out, Stockbar::Setup::RELOGIN
+    end
+  end
+
+  def test_relogin_reminder_is_red_on_a_terminal
+    in_sandbox do
+      install_package_extension
+      out = FakeTerminal.new
+      runner = fresh_install_runner(failing: [SHELL_INFO], ENABLED_EXTENSIONS => "['#{Stockbar::UUID}']\n")
+      Stockbar::CLI.new(["status"], out: out, setup: Stockbar::Setup.new(out: out, runner: runner)).run
+
+      assert_includes out.string, "\e[31m#{Stockbar::Setup::RELOGIN}\e[0m"
     end
   end
 

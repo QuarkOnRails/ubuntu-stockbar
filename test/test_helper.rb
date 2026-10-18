@@ -10,6 +10,8 @@ module TestHelpers
   ENABLED_EXTENSIONS = %w[gsettings get org.gnome.shell enabled-extensions].freeze
   IS_ENABLED = %w[systemctl --user is-enabled stockbar.service].freeze
   START_SERVICE = %w[systemctl --user enable --now stockbar.service].freeze
+  # fails until the running shell has seen the extension, so right after apt install
+  SHELL_INFO = ["gnome-extensions", "info", Stockbar::UUID].freeze
   # right after apt install: our extension not enabled yet, unit installed but disabled
   FRESH_INSTALL = {
     ENABLED_EXTENSIONS => "@as []\n",
@@ -28,7 +30,9 @@ module TestHelpers
         "XDG_CONFIG_HOME" => File.join(dir, "config"),
         "XDG_CACHE_HOME" => File.join(dir, "cache"),
         "XDG_DATA_HOME" => File.join(dir, "data"),
-        "XDG_DATA_DIRS" => File.join(dir, "system")
+        "XDG_DATA_DIRS" => File.join(dir, "system"),
+        # whatever desktop runs the tests, the package build has none
+        "XDG_CURRENT_DESKTOP" => "ubuntu:GNOME"
       }
       saved = vars.keys.to_h { |key| [key, ENV[key]] }
       begin
@@ -96,7 +100,10 @@ class FakeRunner
 
   def run(*command)
     @commands << command
-    @failing.none? { |prefix| command.first(prefix.size) == prefix }
+    ok = @failing.none? { |prefix| command.first(prefix.size) == prefix }
+    # later reads see the write, like real gsettings
+    @outputs[["gsettings", "get", *command[2, 2]]] = "#{command[4]}\n" if ok && command[0, 2] == %w[gsettings set]
+    ok
   end
 
   def capture(*command, check: true)

@@ -24,13 +24,15 @@ module Stockbar
       require "tty-spinner"
     end
 
-    def initialize(out:, source:, on_change:, notice: nil)
+    # the notice goes after the next draw, the warning stays for the whole session
+    def initialize(out:, source:, on_change:, notice: nil, warning: nil)
       @prompt = self.class.prompt(out)
       @banner = Banner::Live.new(out)
       @out = out
       @source = source
       @on_change = on_change
       @notice = notice
+      @warning = warning
     end
 
     def run
@@ -69,6 +71,7 @@ module Stockbar
       end
       @out.puts
       @out.puts @notice if @notice
+      @out.puts @warning if @warning
       @notice = nil
     end
 

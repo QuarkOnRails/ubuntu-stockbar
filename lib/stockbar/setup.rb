@@ -5,8 +5,9 @@ module Stockbar
   # them system-wide, but may not touch anyone's home or settings
   class Setup
     SCHEMA = "org.gnome.shell"
-    RELOGIN = "Log out and back in once so GNOME Shell loads the extension " \
-              "(on Wayland it can't load new ones in place)."
+    # two lines, so it doesn't wrap mid-word in an 80 column terminal
+    RELOGIN = "⚠ Log out and back in once so your stocks show up in the top bar.\n" \
+              "  GNOME only loads new extensions at login."
     USER_EXTENSIONS_OFF = "! GNOME has all extensions switched off (disable-user-extensions), " \
                           "turn them on in the Extensions app"
 
@@ -53,6 +54,13 @@ module Stockbar
       user_extensions_off? ? [USER_EXTENSIONS_OFF] : []
     end
 
+    # the extension is on, but the running shell hasn't seen it yet: GNOME only looks for new ones at login.
+    # the shell check first, after the relogin it's the only one that runs
+    def relogin_needed?
+      gnome_session? && extension_installed? && !shell_knows_extension? &&
+        gsettings_list("enabled-extensions")&.include?(UUID)
+    end
+
     private
 
     def switch_on(quiet:)
@@ -66,7 +74,6 @@ module Stockbar
       end
       lines << start_service if !quiet || unit_file_state == "disabled"
       lines.concat(warnings) if announce
-      lines << RELOGIN if extension == :added && !shell_knows_extension?
       lines
     end
 
@@ -90,6 +97,11 @@ module Stockbar
     # false right after apt install: the running shell only looks for extensions at login
     def shell_knows_extension?
       @runner.run("gnome-extensions", "info", UUID)
+    end
+
+    # ubuntu sets ubuntu:GNOME. over ssh, on a tty or on another desktop gnome-extensions fails for other reasons
+    def gnome_session?
+      ENV["XDG_CURRENT_DESKTOP"].to_s.split(":").include?("GNOME")
     end
 
     def user_extensions_off?

@@ -26,6 +26,7 @@ On any other release, skip the PPA and [build it yourself](#building-it-yourself
 
 Installing it doesn't switch anything on. Add your first stock (see below) and it turns itself on for your user.
 Then **log out and back in once**. GNOME only notices new extensions at login, nobody can do anything about that.
+stockbar keeps reminding you, in red, until you do.
 
 ## Getting started
 
