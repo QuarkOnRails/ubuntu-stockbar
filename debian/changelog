@@ -1,3 +1,10 @@
+stockbar (0.1.1) UNRELEASED; urgency=medium
+
+  * Notify in red to log out and back in until gnome shell has loaded the
+    extension: in the editor, after watchlist changes and in stockbar status.
+
+ -- Quark On Rails <quarkXZ@proton.me>  Sun, 18 Oct 2026 18:28:49 +0200
+
 stockbar (0.1.0) UNRELEASED; urgency=medium
 
   * Initial release.
