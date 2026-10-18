@@ -14,12 +14,15 @@ Stocks, indices, currencies, commodities, crypto. No account, no API key, no sub
 
 ## Install
 
-Ubuntu 22.04, 24.04 or 26.04 with the regular GNOME desktop:
+Ubuntu 22.04, 24.04, 26.04 or 26.10 with the regular GNOME desktop:
 
 ```sh
 sudo add-apt-repository ppa:quarkonrails/stockbar
 sudo apt install stockbar
 ```
+
+On any other release, skip the PPA and [build it yourself](#building-it-yourself). The PPA has nothing for it and
+`apt update` will complain.
 
 Installing it doesn't switch anything on. Add your first stock (see below) and it turns itself on for your user.
 Then **log out and back in once**. GNOME only notices new extensions at login, nobody can do anything about that.
@@ -77,6 +80,9 @@ them: `sp500`, `dow jones`, `dax`, `eurusd`, `gold`, `bitcoin`.
 
 Nothing in the top bar after installing? You haven't logged out and back in yet. Everyone skips that step.
 
+Gone after upgrading Ubuntu? The upgrade switches PPAs off. Run `sudo add-apt-repository ppa:quarkonrails/stockbar`
+again, then `sudo apt upgrade`.
+
 If a price can't be fetched, the last known one stays in the bar, dimmed. Faded, like your hopes. Usually it's the
 network or CNBC having a moment, and it sorts itself out on the next refresh.
 
@@ -101,7 +107,8 @@ Your watchlist stays in `~/.config/stockbar/` in case you come crawling back. De
 
 ## Building it yourself
 
-Rather not add a PPA? Build the package on the machine you'll install it on:
+On another Ubuntu release (anything with GNOME 42 or newer), or rather not add a PPA? Build the package on the
+machine you'll install it on:
 
 ```sh
 git clone https://github.com/QuarkOnRails/ubuntu-stockbar.git
