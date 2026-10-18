@@ -7,7 +7,7 @@ class BannerTest < Minitest::Test
 
   def test_help_logo_with_the_byline_under_its_right_edge
     assert_equal ["", *B::LOGO.map { |row| "  #{row}" }, B::BYLINE.rjust(B::WIDTH)], B.static(color: false)
-    assert_match "\e[32m", B.static(color: true).join
+    assert_match "\e[38;5;161m", B.static(color: true).join
   end
 
   def test_shine_sweeps_the_logo_then_rests

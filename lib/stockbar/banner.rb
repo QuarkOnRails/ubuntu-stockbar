@@ -55,7 +55,7 @@ module Stockbar
       if char == " " then nil
       elsif lit then :bright
       elsif SHADOW.include?(char) then :dim
-      else :green
+      else :ruby
       end
     end
 
