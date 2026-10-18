@@ -1,87 +1,123 @@
 # stockbar
 
-Stock quotes in the GNOME top bar (Ubuntu 22.04 / 24.04 / 26.04), managed from a Ruby CLI.
+Stock prices in your Ubuntu top bar, right next to the clock, so you can watch your money and your time run out
+together.
 
 ```
-AAPL ▲ 1.23% $231.78   MSFT ▼ 0.41% $410.10        ← pinned stocks, in the top bar
+AAPL ▲ 1.23% $231.78   MSFT ▼ 0.41% $410.10
 ```
 
-Clicking it opens a dropdown with every stock in the watchlist, when it last updated, and "Refresh now".
+Click it and you get your whole watchlist, when it last updated, and a "Refresh now" button for when you can't wait
+20 seconds to feel bad.
+
+Stocks, indices, currencies, commodities, crypto. No account, no API key, no subscription, no "upgrade to Pro".
 
 ## Install
 
-Build the package on the Ubuntu release you install it on. The build picks the extension variant for that
-release's GNOME (42–44 or 45+).
+Ubuntu 22.04, 24.04 or 26.04 with the regular GNOME desktop:
 
 ```sh
+sudo add-apt-repository ppa:quarkonrails/stockbar
+sudo apt install stockbar
+```
+
+Installing it doesn't switch anything on. Add your first stock (see below) and it turns itself on for your user.
+Then **log out and back in once**. GNOME only notices new extensions at login, nobody can do anything about that.
+
+## Getting started
+
+Run
+
+```sh
+stockbar
+```
+
+and you get a little editor: search for stocks and add them, choose which ones sit in the top bar, reorder them, set
+how often they refresh. Arrow keys and Enter, nothing to learn.
+
+The first stock you add goes straight to the top bar. The rest wait in the dropdown until you pin them.
+
+## Commands
+
+If you'd rather type than pick from menus:
+
+```sh
+stockbar add AAPL            # add by ticker
+stockbar add "novo nordisk"  # or by name, you'll get a list to pick from
+stockbar add TSLA --pin      # add it straight to the top bar
+stockbar pin MSFT            # show it in the top bar
+stockbar unpin MSFT          # back to the dropdown, out of sight, out of mind
+stockbar remove MSFT         # out of your life entirely
+stockbar list                # the whole watchlist with current prices
+stockbar search apple        # find a ticker
+stockbar refresh             # fetch prices now
+stockbar interval 30         # refresh every 30 s (default 20, minimum 15)
+stockbar status              # is it running, how old are the prices, what broke
+stockbar disable             # turn it all off, your watchlist is kept
+stockbar enable              # and back on
+stockbar help
+```
+
+## Finding the right symbol
+
+Prices come from CNBC, so symbols are CNBC's tickers. US stocks are what you'd expect (`AAPL`, `NVDA`), the rest
+gets creative:
+
+| You want      | Symbol    |
+|---------------|-----------|
+| SAP on XETRA  | `SAP-DE`  |
+| S&P 500       | `.SPX`    |
+| EUR/USD       | `EUR=`    |
+| Bitcoin       | `BTC.CB=` |
+
+You don't have to remember any of that. `stockbar search` finds things by name and knows what people usually call
+them: `sp500`, `dow jones`, `dax`, `eurusd`, `gold`, `bitcoin`.
+
+## When something looks wrong
+
+Nothing in the top bar after installing? You haven't logged out and back in yet. Everyone skips that step.
+
+If a price can't be fetched, the last known one stays in the bar, dimmed. Faded, like your hopes. Usually it's the
+network or CNBC having a moment, and it sorts itself out on the next refresh.
+
+`stockbar status` tells you whether the background service and the top bar extension are running and how old the
+prices are. If that doesn't explain it, the logs might:
+
+```sh
+journalctl --user -u stockbar -f            # the service that fetches prices
+journalctl --user -f /usr/bin/gnome-shell   # the top bar side
+```
+
+Still broken? [Open an issue](https://github.com/QuarkOnRails/ubuntu-stockbar/issues).
+
+## Uninstall
+
+```sh
+stockbar disable
+sudo apt remove stockbar
+```
+
+Your watchlist stays in `~/.config/stockbar/` in case you come crawling back. Delete it if you won't.
+
+## Building it yourself
+
+Rather not add a PPA? Build the package on the machine you'll install it on:
+
+```sh
+git clone https://github.com/QuarkOnRails/ubuntu-stockbar.git
+cd ubuntu-stockbar
 sudo apt install dpkg-dev debhelper gnome-shell-common rake ruby ruby-minitest
 dpkg-buildpackage -us -uc -b
-sudo apt install ../stockbar_0.1.0_all.deb
+sudo apt install ../stockbar_*_all.deb
 ```
 
-The package turns nothing on for anyone. Your first watchlist change (or starting `stockbar`) enables the extension
-and the background service for your user. Then log out and back in once: on Wayland, GNOME Shell only picks up new
-extensions at login. `stockbar enable` / `stockbar disable` do it by hand.
+## The fine print
 
-## Usage
+Not financial advice. stockbar shows you numbers, what you do with them is between you and your broker.
 
-```sh
-stockbar                     # interactive editor: add (search), remove, choose top-bar stocks, reorder, interval
-stockbar search apple
-stockbar add AAPL --pin      # a ticker is added directly
-stockbar add "novo nordisk"  # anything else offers search results to pick from
-stockbar pin MSFT / unpin MSFT
-stockbar remove MSFT
-stockbar list                # table with current prices
-stockbar refresh             # fetch now instead of waiting for the next round
-stockbar interval 30         # refresh every 30 s (minimum 15), without a number it shows the current one
-stockbar status              # service, extension, data age, last errors
-stockbar disable             # extension and service off, the watchlist stays
-```
+Prices come from CNBC's public quote service. It's undocumented, so CNBC can change it whenever they feel like it,
+and some markets may show delayed prices.
 
-Symbols are CNBC tickers: `AAPL`, `SAP-DE` (XETRA), `.SPX` (S&P 500), `EUR=` (EUR/USD), `BTC.CB=` (Bitcoin).
-`stockbar search` finds them by name. The top bar shows CNBC's short names, e.g. "S&P 500" for `.SPX`.
+Looking at it more often won't make it go up. We checked.
 
-The first stock you add is pinned automatically. The refresh interval can also be set in the interactive editor or
-as `refresh_interval` in `~/.config/stockbar/config.json`.
-
-Logs: `journalctl --user -u stockbar -f`. GNOME side: `journalctl --user -f /usr/bin/gnome-shell`
-(or `journalctl /usr/bin/gnome-shell -f`).
-
-## How it fits together
-
-- `stockbar` (Ruby) keeps the watchlist in `~/.config/stockbar/config.json`.
-- `stockbar.service` (systemd user unit) runs `stockbar daemon`. It fetches quotes every 20 s and writes ready-made
-  text to `~/.cache/stockbar/quotes.json`.
-- The GNOME extension `stockbar@quarkonrails.github.io` (JS, because GNOME Shell only runs JS) watches that file and
-  draws it. It has no fetching logic, "Refresh now" just signals the service.
-
-Quotes come from CNBC's quote service and need no API key: one request per round fetches the whole watchlist. The
-service is public but undocumented, so it can change without notice. If a fetch fails, the last known price stays
-visible, dimmed.
-
-`/usr/bin/stockbar` runs the system Ruby with rvm, rbenv and bundler variables cleared. Everything except the
-interactive editor is stdlib-only. The editor's gems (tty-prompt and friends) ship in `third_party/`, because Ubuntu
-22.04's own `ruby-tty-prompt` breaks on Ruby 3.
-
-## Development
-
-```sh
-bundle install           # minitest and rake into vendor/bundle (or: sudo apt install rake ruby-minitest)
-bundle exec rake test    # offline: CNBC parsing, formatting, config, cache, setup, CLI, tty-prompt
-```
-
-Running from a checkout without the package:
-
-```sh
-rake extension GNOME_MAJOR=46   # your GNOME version, see gnome-shell --version
-cp -r build/gnome-shell/extensions/stockbar@quarkonrails.github.io ~/.local/share/gnome-shell/extensions/
-bin/stockbar daemon             # stands in for the service
-```
-
-`extension/core.js` is shared. `legacy.js` (GNOME 42–44, `imports.*`) and `modern.js` (GNOME 45+, ES modules) are
-thin wrappers that `rake extension` joins with it at the `//@@CORE@@` line.
-
-## License
-
-MIT, see [LICENSE](LICENSE). The bundled gems in `third_party/` are MIT too, see `debian/copyright`.
+MIT licensed, see [LICENSE](LICENSE).
