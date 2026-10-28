@@ -183,9 +183,19 @@ class Stockbar {
     }
 
     _rebuildBar() {
+        const anchor = this._scroll?.anchor();
+        this._scroll?.destroy();
+        this._scroll = null;
         for (const half of this._halves)
             half._box.destroy_all_children();
-        const items = (this._data?.items ?? []).filter(item => item.pinned);
+        const allItems = this._data?.items ?? [];
+        const speed = this._data?.scroll_speed ?? 0;
+        if (speed > 0 && allItems.length > 0) {
+            this._scroll = new StockbarScroll(this._halves, allItems, speed, anchor);
+            this._fit();
+            return;
+        }
+        const items = allItems.filter(item => item.pinned);
         this._labels = items.map(item =>
             createLabel(item.bar_text, `stockbar-label ${directionClass(item)}`, item.stale));
         if (items.length === 0)
@@ -232,7 +242,10 @@ class Stockbar {
     _fit() {
         this._fitting = true;
         try {
-            this._applyFit();
+            if (this._scroll)
+                this._scroll.fit(this._sideRoom());
+            else
+                this._applyFit();
         } finally {
             this._fitting = false;
         }
@@ -304,6 +317,7 @@ class Stockbar {
     }
 
     destroy() {
+        this._scroll?.destroy();
         for (const actor of this._panelActors)
             actor.disconnectObject(this);
         global.display.disconnectObject(this);

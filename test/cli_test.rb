@@ -113,6 +113,31 @@ class CLITest < Minitest::Test
     end
   end
 
+  def test_scroll_speed
+    in_sandbox do
+      status, out, _, pokes = cli("scroll")
+      assert_equal 0, status
+      assert_includes out, "Scroll speed: 0"
+      assert_equal 0, pokes
+
+      [1, 10, 0].each do |speed|
+        status, out, _, pokes = cli("scroll", speed.to_s)
+        assert_equal 0, status
+        assert_includes out, "Scroll speed: #{speed}"
+        assert_equal speed, Stockbar::Config.load.scroll_speed
+        assert_equal 1, pokes
+      end
+
+      [["-1"], ["11"], ["1.5"], ["no"], ["5", "6"]].each do |args|
+        status, _, err, pokes = cli("scroll", *args)
+        assert_equal 1, status
+        assert_match(/scroll/, err)
+        assert_equal 0, Stockbar::Config.load.scroll_speed
+        assert_equal 0, pokes
+      end
+    end
+  end
+
   def test_status
     in_sandbox do
       install_package_extension
@@ -122,6 +147,7 @@ class CLITest < Minitest::Test
       _, out = cli("status", runner: runner)
       assert_match(/Service\s+active, enabled/, out)
       assert_match(/Extension\s+enabled/, out)
+      assert_match(/Scroll\s+0/, out)
     end
   end
 

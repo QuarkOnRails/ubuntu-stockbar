@@ -6,6 +6,20 @@ function sideRoom(width, midpoint, leftWidth, rightWidth, others, padding) {
         others / 2 - padding - 1));
 }
 
+function scrollLayout(widths, room, spacing) {
+    const starts = [];
+    let length = 0;
+    for (const width of widths) {
+        starts.push(length);
+        length += Math.ceil(width) + spacing;
+    }
+    return {starts, length, width: Math.max(0, Math.min(Math.floor(room), Math.floor(length / 2)))};
+}
+
+function scrollAdvance(position, speed, milliseconds, length) {
+    return (position + speed * 8 * milliseconds / 1000) % length;
+}
+
 function fitStocks(widths, room, spacing, moreWidth) {
     room = Math.max(0, Math.floor(room));
     widths = widths.map(width => Math.ceil(width));

@@ -15,7 +15,8 @@ module Stockbar
       result = @source.quotes(@config.symbols)
       # a failed symbol keeps its last quote, so the bar doesn't go blank on a network hiccup
       entries = @config.stocks.map { |stock| [stock, result.quotes[stock.symbol] || previous[stock.symbol]] }
-      cache.write(entries, refresh_interval: @config.refresh_interval, errors: result.errors, now: now)
+      cache.write(entries, refresh_interval: @config.refresh_interval, scroll_speed: @config.scroll_speed,
+                  errors: result.errors, now: now)
       Report.new(entries: entries, errors: result.errors)
     end
   end

@@ -11,10 +11,11 @@ module Stockbar
         stockbar search QUERY          search by company name or ticker
         stockbar add QUERY [--pin]     add a stock (offers search results if QUERY isn't a ticker)
         stockbar remove SYMBOL...      remove stocks
-        stockbar pin SYMBOL...         show stocks in the top bar
-        stockbar unpin SYMBOL...       keep stocks in the dropdown only
+        stockbar pin SYMBOL...         show stocks in the static top bar
+        stockbar unpin SYMBOL...       remove stocks from the static top bar
         stockbar refresh               fetch quotes now
         stockbar interval [SECONDS]    show or set how often quotes refresh (default 20)
+        stockbar scroll [SPEED]        scroll the entire watchlist at speed 1–10 (0 = off, default)
         stockbar status                service, extension and data status
         stockbar enable                turn on the top-bar extension and the background service
                                        (your first watchlist change does this by itself)
@@ -49,6 +50,7 @@ module Stockbar
       when "unpin" then pin(@argv, false)
       when "refresh" then refresh
       when "interval" then interval(@argv)
+      when "scroll" then scroll(@argv)
       when "status" then status
       when "enable" then enable
       when "disable" then disable
@@ -127,7 +129,8 @@ module Stockbar
 
       config = Config.load
       symbols.each { |symbol| config.pin(symbol, pinned) }
-      save_and_refresh(config, "#{symbol_list(symbols)} now #{pinned ? 'in the top bar' : 'in the dropdown only'}.")
+      save_and_refresh(config, "#{symbol_list(symbols)} now #{pinned ? 'pinned' : 'unpinned'} " \
+                               "for the static top bar.")
     end
 
     def refresh
@@ -150,6 +153,19 @@ module Stockbar
       setup_notes(config)
     end
 
+    def scroll(args)
+      config = Config.load
+      unless args.empty?
+        raise Error, "usage: stockbar scroll [SPEED]" unless args.size == 1 && /\A\d+\z/.match?(args.first)
+
+        config.scroll_speed = args.first.to_i
+        config.save
+        @on_change.call
+        setup_notes(config)
+      end
+      @out.puts "Scroll speed: #{config.scroll_speed} (0 = off, 10 = fastest)."
+    end
+
     def enable
       remember_setup_choice { @setup.enable }
       remind_relogin
@@ -165,11 +181,12 @@ module Stockbar
       data = Cache.new.read
 
       rows = [
-        ["Watchlist", "#{config.stocks.size} stocks, #{config.stocks.count(&:pinned)} in the top bar"],
+        ["Watchlist", "#{config.stocks.size} stocks, #{config.stocks.count(&:pinned)} pinned"],
         ["Service", @setup.service_state],
         ["Extension", @setup.extension_state],
         ["Quotes", data ? "updated #{Formatter.age(Time.now.to_i - data['updated_at_epoch'].to_i)} ago" : "none yet"],
         ["Interval", "every #{config.refresh_interval} s"],
+        ["Scroll", "#{config.scroll_speed} (0 = off, 10 = fastest)"],
         ["Config", config.path],
         ["Cache", Paths.cache_file]
       ]

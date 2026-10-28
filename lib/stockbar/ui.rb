@@ -80,11 +80,12 @@ module Stockbar
         menu.choice "Add a stock", :add
         unless @config.stocks.empty?
           menu.choice "Remove stocks", :remove
-          menu.choice "Choose what's in the top bar", :choose_pinned
+          menu.choice "Choose stocks for the static top bar", :choose_pinned
           menu.choice "Reorder", :reorder
           menu.choice "Refresh now", :refresh
         end
         menu.choice "Refresh interval: #{@config.refresh_interval} s", :interval
+        menu.choice "Scroll speed: #{@config.scroll_speed} (0 = off)", :scroll
         menu.choice "Quit", :quit
       end
     end
@@ -109,7 +110,7 @@ module Stockbar
       return if picked == :cancel
 
       first_pin = @config.stocks.none?(&:pinned)
-      pinned = @prompt.yes?("Show #{picked.symbol} in the top bar?") { |q| q.default(first_pin) }
+      pinned = @prompt.yes?("Pin #{picked.symbol} in the static top bar?") { |q| q.default(first_pin) }
       @config.add(picked.symbol, name: picked.name, pinned: pinned)
       save_and_refresh "Added #{picked.symbol}."
     end
@@ -125,7 +126,7 @@ module Stockbar
     def choose_pinned
       # tty-prompt defaults are 1-based positions
       pinned = @config.stocks.each.with_index(1).filter_map { |stock, position| position if stock.pinned }
-      symbols = @prompt.multi_select("Show in the top bar: (space toggles, enter confirms)", stock_choices,
+      symbols = @prompt.multi_select("Pin in the static top bar: (space toggles, enter confirms)", stock_choices,
                                      default: pinned, **list_options)
       @config.pinned_symbols = symbols
       save_and_refresh
@@ -147,6 +148,16 @@ module Stockbar
       @config.refresh_interval = @prompt.ask("Seconds between updates (at least #{Config::MIN_INTERVAL}):",
                                              default: @config.refresh_interval.to_s) do |q|
         q.validate(/\A\d+\z/, "Enter a whole number of seconds")
+        q.convert(:int)
+      end
+      @config.save
+      @on_change.call
+    end
+
+    def scroll
+      @config.scroll_speed = @prompt.ask("Scroll speed (0 = off, 10 = fastest):",
+                                         default: @config.scroll_speed.to_s) do |q|
+        q.validate(/\A(?:[0-9]|10)\z/, "Enter a whole number from 0 to 10")
         q.convert(:int)
       end
       @config.save

@@ -23,9 +23,9 @@ function controller() {
 
 function span(actor) {
     const box = actor.get_allocation_box();
-    let x = box.x1;
+    let x = box.x1 + actor.translation_x;
     for (let parent = actor.get_parent(); parent && parent !== Main.panel; parent = parent.get_parent())
-        x += parent.get_allocation_box().x1;
+        x += parent.get_allocation_box().x1 + parent.translation_x;
     return [x, x + box.x2 - box.x1];
 }
 
@@ -47,15 +47,41 @@ function geometry() {
         halves: stockbar._halves.map(half => ({
             slot: span(half.container),
             visible: half.visible,
-            labels: half._box.get_children().filter(label => label.visible).map(label => ({
+            labels: half._box.get_children().filter(label => label.visible && label instanceof St.Label).map(label => ({
                 text: label.text, span: span(label), width: label.width,
                 fullWidth: label.clutter_text.get_preferred_width(-1)[1],
             })),
         })),
-        fit: JSON.parse(stockbar._lastFit),
+        fit: stockbar._scroll ? {shown: stockbar._scroll.layout.width > 0 ? stockbar._data.items.length : 0,
+            more: false} : JSON.parse(stockbar._lastFit),
+        scroll: scrollGeometry(stockbar._scroll),
         room: stockbar._sideRoom(),
         quote: stockbar._data?.updated_at_epoch,
         fits,
+    };
+}
+
+function scrollGeometry(scroll) {
+    if (!scroll)
+        return null;
+    return {
+        position: scroll.position,
+        anchor: scroll.anchor(),
+        length: scroll.layout.length,
+        width: scroll.layout.width,
+        playing: scroll._timeline.is_playing(),
+        time: GLib.get_monotonic_time() / 1000,
+        views: scroll._views.map(({viewport, strips}) => {
+            const bounds = span(viewport);
+            return {
+                span: bounds,
+                height: viewport.height,
+                clipped: viewport.clip_to_allocation,
+                labels: strips.flatMap(strip => strip.get_children().map((label, i) => ({
+                    symbol: scroll._items[i].symbol, text: label.text, span: span(label),
+                }))).filter(label => label.span[1] > bounds[0] && label.span[0] < bounds[1]),
+            };
+        }),
     };
 }
 
@@ -77,7 +103,7 @@ function settledGeometry(request) {
                     return GLib.SOURCE_CONTINUE;
                 }
                 const result = geometry();
-                const key = JSON.stringify(result);
+                const key = JSON.stringify({...result, scroll: undefined});
                 unchanged = key === previous ? unchanged + 1 : 0;
                 previous = key;
                 if (unchanged < 2)
@@ -109,8 +135,27 @@ async function handle(dir, request) {
         Main.extensionManager.enableExtension(UUID);
     } else if (request.action === 'text-scale') {
         new Gio.Settings({schema_id: 'org.gnome.desktop.interface'}).set_double('text-scaling-factor', request.scale);
+    } else if (request.action === 'menu-open') {
+        controller()._halves[1].menu.open();
+    } else if (request.action === 'menu-close') {
+        controller()._halves[1].menu.close();
     }
     const result = await settledGeometry(request);
+    if (request.action === 'motion') {
+        result.samples = [scrollGeometry(controller()._scroll)];
+        await new Promise(resolve => {
+            settleId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 100, () => {
+                const sample = scrollGeometry(controller()._scroll);
+                result.samples.push(sample);
+                if (sample.time - result.samples[0].time < request.duration)
+                    return GLib.SOURCE_CONTINUE;
+                settleId = 0;
+                resolve();
+                return GLib.SOURCE_REMOVE;
+            });
+        });
+        result.finalFits = fits;
+    }
     if (request.screenshot) {
         const stream = Gio.File.new_for_path(`${dir}/${request.id}.png`).replace(
             null, false, Gio.FileCreateFlags.NONE, null);

@@ -26,6 +26,7 @@ class ExtensionTest < Minitest::Test
         refute_includes js, Extension::CORE_MARKER
         assert_includes js, "class StockbarIndicator extends PanelMenu.Button"
         assert_includes js, "function fitStocks("
+        assert_includes js, "class StockbarScroll"
         assert_equal Stockbar::UUID, metadata["uuid"]
         assert_equal Stockbar::URL, metadata["url"]
         assert_includes metadata["shell-version"], major.to_s

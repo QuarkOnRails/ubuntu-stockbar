@@ -33,17 +33,18 @@ module Stockbar
       end
     end
 
-    def write(entries, refresh_interval:, errors:, now:)
-      AtomicFile.write(path, "#{JSON.pretty_generate(payload(entries, refresh_interval, errors, now))}\n")
+    def write(entries, refresh_interval:, scroll_speed:, errors:, now:)
+      AtomicFile.write(path, "#{JSON.pretty_generate(payload(entries, refresh_interval, scroll_speed, errors, now))}\n")
     end
 
     private
 
-    def payload(entries, refresh_interval, errors, now)
+    def payload(entries, refresh_interval, scroll_speed, errors, now)
       {
         "updated_at_epoch" => now.to_i,
         "updated_at_text" => now.strftime("%H:%M"),
         "refresh_interval" => refresh_interval,
+        "scroll_speed" => scroll_speed,
         "error" => Formatter.error_summary(errors),
         "errors" => errors,
         "items" => entries.map { |stock, quote| item(stock, quote) }

@@ -76,7 +76,7 @@ def main():
         pending.write_text(json.dumps(dict(id=name, action=action, quote=quote_id, **options)))
         pending.replace(run / 'request')
         result = run / f'{name}.json'
-        deadline = time.monotonic() + 30
+        deadline = time.monotonic() + 30 + options.get('duration', 0) / 1000
         while not result.exists() and time.monotonic() < deadline:
             if shell.poll() is not None:
                 raise RuntimeError(f'Shell exited; see {run / "shell.log"}')
@@ -89,17 +89,21 @@ def main():
 
     quote_id = int(time.time())
 
-    def quotes(count, long=False):
+    def quotes(count, long=False, speed=None, total=9, price='$231.78', reverse=False):
         nonlocal quote_id
         quote_id += 1
         items = []
-        for i in range(9):
+        for i in range(total):
             symbol = ['AAPL', 'MSFT', 'NVDA', 'TSLA', 'S&P 500', 'BTC', 'KO', 'SAP', 'EUR/USD'][i]
             text = ('An exceptionally long international stock index name ' * 5) if long and i == 0 else symbol
             items.append(dict(symbol=symbol, display_symbol=symbol, name=symbol, pinned=i < count,
-                              direction='up', bar_text=f'{text} ▲ 1.23% $231.78', price_text='$231.78',
+                              direction='up', bar_text=f'{text} ▲ 1.23% {price}', price_text=price,
                               change_text='▲ +2.81 (+1.23%)', stale=False))
+        if reverse:
+            items.reverse()
         payload = dict(items=items, updated_at_epoch=quote_id, updated_at_text='12:00', refresh_interval=20)
+        if speed is not None:
+            payload['scroll_speed'] = speed
         pending = cache / 'stockbar/quotes.tmp'
         pending.write_text(json.dumps(payload))
         pending.replace(cache / 'stockbar/quotes.json')
@@ -185,6 +189,76 @@ def main():
             enabled = request('enable', screenshot=True)
             validate(enabled, clock)
             assert enabled['fit'] == before['fit'], (enabled, before)
+
+            # unpinned stocks must also reach the clipped viewports
+            quotes(1, speed=10)
+            scrolling = request(screenshot=True)
+            validate(scrolling, clock)
+            assert scrolling['scroll']['playing'], scrolling
+            cycle = request('motion', duration=scrolling['scroll']['length'] / 80 * 1000 + 300)
+            seen = {label['symbol'] for sample in cycle['samples'] for view in sample['views']
+                    for label in view['labels']}
+            assert seen == {'AAPL', 'MSFT', 'NVDA', 'TSLA', 'S&P 500', 'BTC', 'KO', 'SAP', 'EUR/USD'}, seen
+            assert cycle['finalFits'] - cycle['fits'] <= 2, cycle
+            for sample in cycle['samples']:
+                assert sample['width'] == scrolling['scroll']['width'], sample
+                assert all(view['clipped'] for view in sample['views']), sample
+            motion = request('motion', duration=1000)
+            start, end = motion['samples'][0], motion['samples'][-1]
+            distance = (end['position'] - start['position']) % end['length']
+            assert abs(distance - 80 * (end['time'] - start['time']) / 1000) < 5, motion
+            validate(request(), clock)
+
+            paused = request('menu-open')
+            assert not paused['scroll']['playing'], paused
+            motion = request('motion', duration=400)
+            assert len({sample['position'] for sample in motion['samples']}) == 1, motion
+            # cache refresh and a speed change keep the same stock and offset while paused
+            quotes(1, speed=5, price='$12,345.67', reverse=True)
+            refreshed = request()
+            old_anchor, new_anchor = paused['scroll']['anchor'], refreshed['scroll']['anchor']
+            assert new_anchor['symbol'] == old_anchor['symbol'], (new_anchor, old_anchor)
+            assert abs(new_anchor['offset'] - old_anchor['offset']) < 0.001, (new_anchor, old_anchor)
+            assert not refreshed['scroll']['playing'], refreshed
+            request('menu-close')
+            motion = request('motion', duration=1000)
+            start, end = motion['samples'][0], motion['samples'][-1]
+            distance = (end['position'] - start['position']) % end['length']
+            assert abs(distance - 40 * (end['time'] - start['time']) / 1000) < 5, motion
+
+            crowded = request('tray', width=2000)
+            validate(crowded, clock)
+            assert not crowded['scroll']['playing'], crowded
+            recovered = request('remove-tray')
+            validate(recovered, clock)
+            assert recovered['scroll']['playing'], recovered
+            enlarged = request('text-scale', scale=args.scale * 1.5)
+            validate(enlarged)
+            assert enlarged['scroll']['length'] > recovered['scroll']['length'], enlarged
+            assert enlarged['scroll']['views'][0]['height'] > recovered['scroll']['views'][0]['height'], enlarged
+            validate(request('text-scale', scale=args.scale), clock)
+            assert not request('disable')['enabled']
+            validate(request('enable'), clock)
+
+            quotes(0, speed=10, total=1)
+            single = request(screenshot=True)
+            validate(single, clock)
+            assert single['scroll']['playing'], single
+            assert 2 * single['scroll']['width'] <= single['scroll']['length'], single
+            quotes(0, long=True, speed=10, total=1)
+            long_scroll = request(screenshot=True)
+            validate(long_scroll, clock)
+            assert long_scroll['scroll']['length'] > 2 * long_scroll['scroll']['width'], long_scroll
+            quotes(0, speed=10, total=0)
+            empty = request()
+            validate(empty, clock)
+            assert empty['scroll'] is None, empty
+            quotes(1, speed=0)
+            stopped = request()
+            validate(stopped, clock)
+            assert stopped['scroll'] is None, stopped
+            assert stopped['fit']['shown'] == 1, stopped
+            print(f'{args.size} scale={args.scale} rtl={args.rtl}: scrolling, pause, recovery and stop passed', flush=True)
         finally:
             shell.terminate()
             try:

@@ -28,7 +28,7 @@ module Stockbar
     def build(dir, major:)
       variant = variant_for(major)
       wrapper = File.read(File.join(SOURCE_DIR, "#{variant}.js"))
-      core = %w[layout.js core.js].map { |name| File.read(File.join(SOURCE_DIR, name)) }.join("\n")
+      core = %w[layout.js scroll.js core.js].map { |name| File.read(File.join(SOURCE_DIR, name)) }.join("\n")
       metadata = {
         "uuid" => UUID,
         "name" => "Stockbar",

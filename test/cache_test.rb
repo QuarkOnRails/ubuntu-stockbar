@@ -22,6 +22,7 @@ class CacheTest < Minitest::Test
   def test_writes_what_the_extension_reads
     in_sandbox do
       config = config_with("AAPL", "MSFT", ".SPX")
+      config.scroll_speed = 5
       now = Time.at(1_760_720_000)
       source = StubSource.new("AAPL" => quote(price: 231.78, previous_close: 228.97, quote_type: "STOCK"),
                               "MSFT" => quote(symbol: "MSFT", price: 410.10, previous_close: 411.79),
@@ -33,6 +34,7 @@ class CacheTest < Minitest::Test
       assert_equal now.to_i, data["updated_at_epoch"]
       assert_equal now.strftime("%H:%M"), data["updated_at_text"]
       assert_equal 20, data["refresh_interval"]
+      assert_equal 5, data["scroll_speed"]
       assert_nil data["error"]
 
       aapl, msft, spx = data["items"]
@@ -61,6 +63,7 @@ class CacheTest < Minitest::Test
       assert_equal fresh.to_h.merge(stale: true), report.entries.first.last.to_h
 
       data = Stockbar::Cache.new.read
+      assert_equal 0, data["scroll_speed"]
       aapl, msft = data["items"]
       assert_equal true, aapl["stale"]
       assert_equal "AAPL ▲ 1.23% $231.78", aapl["bar_text"]

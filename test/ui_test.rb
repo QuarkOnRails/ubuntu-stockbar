@@ -50,6 +50,19 @@ class UITest < Minitest::Test
     assert_equal 45, seconds
   end
 
+  def test_scroll_setting_saves_and_notifies
+    in_sandbox do
+      ui = Stockbar::UI.allocate
+      ui.instance_variable_set(:@prompt, prompt("11\r5\r"))
+      ui.instance_variable_set(:@config, Stockbar::Config.load)
+      pokes = 0
+      ui.instance_variable_set(:@on_change, -> { pokes += 1 })
+      ui.send(:scroll)
+      assert_equal 5, Stockbar::Config.load.scroll_speed
+      assert_equal 1, pokes
+    end
+  end
+
   def test_spinner
     spinner = TTY::Spinner.new("[:spinner] Fetching quotes…", format: :dots, output: StringIO.new, clear: true)
     spinner.auto_spin

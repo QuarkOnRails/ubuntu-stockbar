@@ -9,7 +9,7 @@ module Stockbar
 
     Stock = Struct.new(:symbol, :name, :pinned, keyword_init: true)
 
-    attr_reader :path, :stocks, :refresh_interval
+    attr_reader :path, :stocks, :refresh_interval, :scroll_speed
     # set once stockbar has turned itself on, or the user chose with enable/disable; later choices
     # (stockbar disable, the Extensions app) are then left alone
     attr_accessor :setup_done
@@ -28,6 +28,7 @@ module Stockbar
     def initialize(path, data = {})
       @path = path
       self.refresh_interval = data.fetch("refresh_interval", DEFAULT_INTERVAL)
+      self.scroll_speed = data.fetch("scroll_speed", 0)
       @setup_done = data["setup_done"] == true
       @stocks = Array(data["stocks"]).filter_map do |entry|
         symbol = self.class.normalize(entry["symbol"])
@@ -43,6 +44,14 @@ module Stockbar
 
     def symbols
       stocks.map(&:symbol)
+    end
+
+    def scroll_speed=(speed)
+      unless speed.is_a?(Integer) && speed.between?(0, 10)
+        raise Error, "scroll speed must be a whole number from 0 to 10"
+      end
+
+      @scroll_speed = speed
     end
 
     def find(symbol)
@@ -87,6 +96,7 @@ module Stockbar
     def to_h
       data = {
         "refresh_interval" => refresh_interval,
+        "scroll_speed" => scroll_speed,
         "stocks" => stocks.map { |s| { "symbol" => s.symbol, "name" => s.name, "pinned" => s.pinned } }
       }
       setup_done ? data.merge("setup_done" => true) : data

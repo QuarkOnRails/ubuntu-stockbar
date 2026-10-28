@@ -21,7 +21,7 @@ module Stockbar
           [today, quote&.stale ? :dim : TINTS[Formatter.direction(quote)]]
         ]
       end
-      legend = Table.paint("★ = shown in the top bar", :dim, color)
+      legend = Table.paint("★ = pinned in the static top bar; scrolling shows all stocks", :dim, color)
       [table.render, legend, *error_lines(errors, color: color)].join("\n")
     end
 

@@ -3,8 +3,9 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
 const path = require('node:path');
-const {fitStocks, sideRoom} = vm.runInNewContext(
-    fs.readFileSync(path.join(__dirname, '../extension/layout.js'), 'utf8') + '\n({fitStocks, sideRoom});');
+const {fitStocks, sideRoom, scrollLayout, scrollAdvance} = vm.runInNewContext(
+    fs.readFileSync(path.join(__dirname, '../extension/layout.js'), 'utf8') +
+    '\n({fitStocks, sideRoom, scrollLayout, scrollAdvance});');
 
 let cases = 0;
 function check(widths, room, spacing, expected) {
@@ -65,3 +66,22 @@ assert.equal(sideRoom(1366, 683, 200, 300, 200, 24), 258);
 assert.equal(sideRoom(100, 50, 40, 40, 50, 24), 0);
 assert.equal(sideRoom(1920, 960, 200, 300, 201, 24), 534);
 console.log(`Layout: ${cases} fit cases and 5 geometry cases passed`);
+
+const loop = scrollLayout([40.2, 90, 400], 100, 14);
+assert.deepEqual(Array.from(loop.starts), [0, 55, 159]);
+assert.equal(loop.length, 573);
+assert.equal(loop.width, 100);
+assert.equal(scrollLayout([40], 100, 14).width, 27);
+assert.equal(scrollLayout([], 100, 14).width, 0);
+assert.equal(scrollLayout([40], -10, 14).width, 0);
+assert.equal(scrollAdvance(0, 0, 1000, 100), 0);
+assert.equal(scrollAdvance(0, 1, 1000, 100), 8);
+assert.equal(scrollAdvance(0, 5, 1000, 100), 40);
+assert.equal(scrollAdvance(0, 10, 1000, 100), 80);
+assert.equal(scrollAdvance(90, 10, 1000, 100), 70);
+assert.equal(scrollAdvance(0, 10, 5000, 100), 0);
+let position = 0;
+for (let frame = 0; frame < 100; frame++)
+    position = scrollAdvance(position, 5, 10, 100);
+assert(Math.abs(position - scrollAdvance(0, 5, 1000, 100)) < 0.00001);
+console.log('Scroll: sizing, speed, wraparound and frame-rate independence passed');

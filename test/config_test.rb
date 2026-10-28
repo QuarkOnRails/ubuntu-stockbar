@@ -13,6 +13,7 @@ class ConfigTest < Minitest::Test
 
       assert_equal [], config.stocks
       assert_equal 20, config.refresh_interval
+      assert_equal 0, config.scroll_speed
       assert_equal File.join(ENV["XDG_CONFIG_HOME"], "stockbar", "config.json"), config.path
     end
   end
@@ -23,6 +24,7 @@ class ConfigTest < Minitest::Test
       config.add("aapl", name: "Apple Inc.", pinned: true)
       config.add(".SPX")
       config.refresh_interval = 120
+      config.scroll_speed = 7
       config.save
 
       assert_equal 0o600, File.stat(config.path).mode & 0o777
@@ -33,6 +35,7 @@ class ConfigTest < Minitest::Test
       assert_equal [true, false], loaded.stocks.map(&:pinned)
       assert_equal "Apple Inc.", loaded.find("aapl").name
       assert_equal 120, loaded.refresh_interval
+      assert_equal 7, loaded.scroll_speed
     end
   end
 
@@ -74,6 +77,19 @@ class ConfigTest < Minitest::Test
 
     config.refresh_interval = "abc"
     assert_equal Stockbar::Config::DEFAULT_INTERVAL, config.refresh_interval
+  end
+
+  def test_scroll_speed_requires_an_integer_in_range
+    config = build_config
+    [0, 1, 10].each do |speed|
+      config.scroll_speed = speed
+      assert_equal speed, config.scroll_speed
+    end
+    [-1, 11, 1.5, 1.0, "5", nil, true].each do |speed|
+      assert_raises(Stockbar::Error) { config.scroll_speed = speed }
+      assert_equal 10, config.scroll_speed
+    end
+    assert_raises(Stockbar::Error) { build_config("scroll_speed" => 11) }
   end
 
   def test_invalid_json

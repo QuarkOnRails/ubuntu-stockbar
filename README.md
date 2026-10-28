@@ -59,11 +59,18 @@ stockbar list                # the whole watchlist with current prices
 stockbar search apple        # find a ticker
 stockbar refresh             # fetch prices now
 stockbar interval 30         # refresh every 30 s (default 20, minimum 15)
+stockbar scroll 5            # scroll the entire watchlist (1–10, slow to fast)
+stockbar scroll 0            # stop scrolling and show pinned stocks again (default)
 stockbar status              # is it running, how old are the prices, what broke
 stockbar disable             # turn it all off, your watchlist is kept
 stockbar enable              # and back on
 stockbar help
 ```
+
+Scrolling moves all stocks, including unpinned ones, through the existing spaces beside the clock. Speeds 1–10
+move at 8–80 logical pixels per second. The dropdown pauses scrolling while open. Changes apply when the daemon
+next writes the quote cache; pinning controls the static bar when scrolling is off. The interactive editor also
+has a scroll speed setting.
 
 ## Finding the right symbol
 
