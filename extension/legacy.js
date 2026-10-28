@@ -11,13 +11,12 @@ const ExtensionUtils = imports.misc.extensionUtils;
 
 class Extension {
     enable() {
-        this._indicator = new StockbarIndicator();
-        Main.panel.addToStatusArea(ExtensionUtils.getCurrentExtension().uuid, this._indicator, 0, 'right');
+        this._stockbar = new Stockbar(ExtensionUtils.getCurrentExtension().uuid);
     }
 
     disable() {
-        this._indicator.destroy();
-        this._indicator = null;
+        this._stockbar.destroy();
+        this._stockbar = null;
     }
 }
 

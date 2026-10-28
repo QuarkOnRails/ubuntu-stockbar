@@ -1,10 +1,10 @@
 # stockbar
 
-Stock prices in your Ubuntu top bar, right next to the clock, so you can watch your money and your time run out
+Stock prices in your Ubuntu top bar, either side of the clock, so you can watch your money and your time run out
 together.
 
 ```
-AAPL ▲ 1.23% $231.78   MSFT ▼ 0.41% $410.10
+AAPL ▲ 1.23% $231.78   MSFT ▼ 0.41% $410.10   Oct 26  14:32   NVDA ▲ 2.07% $181.20   TSLA ▼ 3.12% $219.85
 ```
 
 Click it and you get your whole watchlist, when it last updated, and a "Refresh now" button for when you can't wait
@@ -40,6 +40,9 @@ and you get a little editor: search for stocks and add them, choose which ones s
 how often they refresh. Arrow keys and Enter, nothing to learn.
 
 The first stock you add goes straight to the top bar. The rest wait in the dropdown until you pin them.
+
+The top bar shows as many as fit: right of the clock first, then left of it. The rest hide behind a `…`,
+the dropdown still has them all. An unusually long stock label is shortened to fit. Greed has limits, top bars more so.
 
 ## Commands
 
@@ -118,6 +121,10 @@ sudo apt install dpkg-dev debhelper gnome-shell-common rake ruby ruby-minitest
 dpkg-buildpackage -us -uc -b
 sudo apt install ../stockbar_*_all.deb
 ```
+
+For development, `rake test` runs the Ruby tests and `rake test_layout` checks pixel fitting with Node (no npm
+dependencies). `python3 test/headless/run.py --size 1366x768` tests the extension in an isolated headless GNOME
+session and saves screenshots and geometry under `build/headless/`. It also accepts `--scale 1.5` and `--rtl`.
 
 ## The fine print
 

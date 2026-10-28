@@ -13,12 +13,11 @@ import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 
 export default class StockbarExtension extends Extension {
     enable() {
-        this._indicator = new StockbarIndicator();
-        Main.panel.addToStatusArea(this.uuid, this._indicator, 0, 'right');
+        this._stockbar = new Stockbar(this.uuid);
     }
 
     disable() {
-        this._indicator.destroy();
-        this._indicator = null;
+        this._stockbar.destroy();
+        this._stockbar = null;
     }
 }

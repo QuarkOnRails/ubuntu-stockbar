@@ -8,6 +8,11 @@ Rake::TestTask.new(:test) do |t|
   t.warning = true
 end
 
+desc "Test pixel fitting without GNOME (requires node, no npm dependencies)"
+task :test_layout do
+  sh "node", "test/layout_test.js"
+end
+
 desc "Build the GNOME extension for GNOME_MAJOR into build/ (debian/rules passes the build system's version)"
 task :extension do
   require_relative "lib/stockbar"
