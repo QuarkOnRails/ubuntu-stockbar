@@ -1,3 +1,15 @@
+stockbar (1.0.0) UNRELEASED; urgency=medium
+
+  * Fit stock labels to available panel space while keeping the clock centered.
+    Show an overflow indicator for stocks that do not fit.
+  * Add configurable scrolling for the whole watchlist, with speeds 1-10 and
+    pause while the dropdown is open. Keep pinned stocks when scrolling is off.
+  * Add scroll controls to the CLI and interactive editor.
+  * Remind users to log out and back in after extension code or style updates.
+    CLI-only and background-service updates do not trigger the notice.
+
+ -- Quark On Rails <quarkXZ@proton.me>  Wed, 28 Oct 2026 12:20:46 +0100
+
 stockbar (0.1.1) UNRELEASED; urgency=medium
 
   * Notify in red to log out and back in until gnome shell has loaded the
