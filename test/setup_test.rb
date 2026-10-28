@@ -34,16 +34,49 @@ class SetupTest < Minitest::Test
       install_package_extension
       enabled = { ENABLED_EXTENSIONS => "['#{UUID}']\n" }
 
-      assert setup_with(failing: [SHELL_INFO], **enabled).relogin_needed?
-      refute setup_with(**enabled).relogin_needed?
+      assert setup_with(SHELL_INFO => "(@a{sv} {},)\n", **enabled).relogin_notice
+      refute setup_with(**enabled).relogin_notice
+    end
+  end
+
+  def test_update_notice_until_the_loaded_fingerprint_matches
+    in_sandbox do
+      fingerprint = "a" * 64
+      install_package_extension(fingerprint: fingerprint)
+      enabled = { ENABLED_EXTENSIONS => "['#{UUID}']\n" }
+      [nil, "b" * 64, fingerprint].each do |loaded|
+        info = "({'uuid': <'#{UUID}'>"
+        info += ", 'stockbar-fingerprint': <'#{loaded}'>" if loaded
+        info += "},)\n"
+        notice = setup_with(SHELL_INFO => info, **enabled).relogin_notice
+        if loaded == fingerprint
+          assert_nil notice
+        else
+          assert_equal Setup::UPDATE_RELOGIN, notice
+        end
+      end
+      assert_nil setup_with(**enabled, SHELL_INFO => nil).relogin_notice
+      assert_nil setup_with(**enabled, SHELL_INFO => "unexpected output").relogin_notice
+      assert_nil setup_with.relogin_notice
+    end
+  end
+
+  def test_user_extension_takes_precedence_over_system_extension
+    in_sandbox do
+      install_package_extension(fingerprint: "a" * 64)
+      dir = File.join(ENV["XDG_DATA_HOME"], "gnome-shell", "extensions", UUID)
+      FileUtils.mkdir_p(dir)
+      File.write(File.join(dir, "metadata.json"), JSON.generate("stockbar-fingerprint" => "b" * 64))
+      info = "({'uuid': <'#{UUID}'>, 'stockbar-fingerprint': <'#{'b' * 64}'>},)\n"
+      assert_nil setup_with(SHELL_INFO => info, ENABLED_EXTENSIONS => "['#{UUID}']\n").relogin_notice
     end
   end
 
   def test_no_relogin_needed_while_the_extension_is_off
     in_sandbox do
       install_package_extension
-      refute setup_with(failing: [SHELL_INFO]).relogin_needed?
-      refute setup_with(failing: [SHELL_INFO], ENABLED_EXTENSIONS => nil).relogin_needed?
+      refute setup_with(SHELL_INFO => "(@a{sv} {},)\n").relogin_notice
+      refute setup_with(SHELL_INFO => "(@a{sv} {},)\n", ENABLED_EXTENSIONS => nil).relogin_notice
     end
   end
 
@@ -53,14 +86,14 @@ class SetupTest < Minitest::Test
       enabled = { ENABLED_EXTENSIONS => "['#{UUID}']\n" }
       ["", "KDE", "XFCE"].each do |desktop|
         ENV["XDG_CURRENT_DESKTOP"] = desktop
-        refute setup_with(failing: [SHELL_INFO], **enabled).relogin_needed?, desktop
+        refute setup_with(SHELL_INFO => "(@a{sv} {},)\n", **enabled).relogin_notice, desktop
       end
     end
   end
 
   def test_no_relogin_needed_without_the_package
     in_sandbox do
-      refute setup_with(failing: [SHELL_INFO], ENABLED_EXTENSIONS => "['#{UUID}']\n").relogin_needed?
+      refute setup_with(SHELL_INFO => "(@a{sv} {},)\n", ENABLED_EXTENSIONS => "['#{UUID}']\n").relogin_notice
       assert_empty @runner.commands
     end
   end

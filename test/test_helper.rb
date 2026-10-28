@@ -10,13 +10,14 @@ module TestHelpers
   ENABLED_EXTENSIONS = %w[gsettings get org.gnome.shell enabled-extensions].freeze
   IS_ENABLED = %w[systemctl --user is-enabled stockbar.service].freeze
   START_SERVICE = %w[systemctl --user enable --now stockbar.service].freeze
-  # fails until the running shell has seen the extension, so right after apt install
-  SHELL_INFO = ["gnome-extensions", "info", Stockbar::UUID].freeze
+  SHELL_INFO = %w[gdbus call --session --dest org.gnome.Shell --object-path /org/gnome/Shell
+                  --method org.gnome.Shell.Extensions.GetExtensionInfo].push(Stockbar::UUID).freeze
   # right after apt install: our extension not enabled yet, unit installed but disabled
   FRESH_INSTALL = {
     ENABLED_EXTENSIONS => "@as []\n",
     %w[gsettings get org.gnome.shell disabled-extensions] => "@as []\n",
-    IS_ENABLED => "disabled\n"
+    IS_ENABLED => "disabled\n",
+    SHELL_INFO => "({'uuid': <'#{Stockbar::UUID}'>},)\n"
   }.freeze
 
   def fixture(name)
@@ -45,10 +46,10 @@ module TestHelpers
   end
 
   # what the package puts in /usr/share, here under the sandbox's XDG_DATA_DIRS
-  def install_package_extension
+  def install_package_extension(fingerprint: nil)
     dir = File.join(ENV["XDG_DATA_DIRS"], "gnome-shell", "extensions", Stockbar::UUID)
     FileUtils.mkdir_p(dir)
-    File.write(File.join(dir, "metadata.json"), "{}")
+    File.write(File.join(dir, "metadata.json"), JSON.generate("stockbar-fingerprint" => fingerprint))
   end
 
   def fresh_install_runner(failing: [], **outputs)

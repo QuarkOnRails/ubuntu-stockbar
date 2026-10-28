@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Run under dbus-run-session; all settings, quotes and screenshots use a fresh build/headless directory."""
 import argparse
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -259,6 +260,27 @@ def main():
             assert stopped['scroll'] is None, stopped
             assert stopped['fit']['shown'] == 1, stopped
             print(f'{args.size} scale={args.scale} rtl={args.rtl}: scrolling, pause, recovery and stop passed', flush=True)
+            def notice():
+                return subprocess.check_output(
+                    ['ruby', '-Ilib', '-rstockbar', '-e', 'puts Stockbar::Setup.new.relogin_notice'],
+                    cwd=REPO, env=dict(os.environ, XDG_CURRENT_DESKTOP='GNOME'), text=True).strip()
+
+            assert notice() == ''
+            installed = ext / UUID
+            stylesheet = installed / 'stylesheet.css'
+            stylesheet.write_text(stylesheet.read_text() + '\n')
+            metadata_path = installed / 'metadata.json'
+            metadata = json.loads(metadata_path.read_text())
+            metadata['stockbar-fingerprint'] = hashlib.sha256(
+                (installed / 'extension.js').read_bytes() + b'\0' + stylesheet.read_bytes()).hexdigest()
+            metadata_path.write_text(json.dumps(metadata))
+            assert 'extension has been updated' in notice()
+            shell.terminate()
+            shell.wait(timeout=10)
+            shell = subprocess.Popen(shell.args, stdout=log, stderr=subprocess.STDOUT)
+            validate(request())
+            assert notice() == ''
+            print('Extension update notice cleared after a fresh Shell session', flush=True)
         finally:
             shell.terminate()
             try:

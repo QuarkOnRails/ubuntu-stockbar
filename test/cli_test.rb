@@ -40,15 +40,15 @@ class CLITest < Minitest::Test
   def test_relogin_reminder_until_the_shell_has_seen_the_extension
     in_sandbox do
       install_package_extension
-      _, out = cli("add", "AAPL", runner: fresh_install_runner(failing: [SHELL_INFO]))
+      _, out = cli("add", "AAPL", runner: fresh_install_runner(SHELL_INFO => "(@a{sv} {},)\n"))
       assert out.end_with?("✓ stockbar.service running\n#{Stockbar::Setup::RELOGIN}\n"), out
 
       # what turn_on wrote to gsettings
       enabled = { ENABLED_EXTENSIONS => "['#{Stockbar::UUID}']\n", IS_ENABLED => "enabled\n" }
-      _, out = cli("add", "EUR=", runner: fresh_install_runner(failing: [SHELL_INFO], **enabled))
+      _, out = cli("add", "EUR=", runner: fresh_install_runner(SHELL_INFO => "(@a{sv} {},)\n", **enabled))
       assert out.end_with?("Added EUR= (EUR/USD).\n#{Stockbar::Setup::RELOGIN}\n"), out
 
-      _, out = cli("status", runner: fresh_install_runner(failing: [SHELL_INFO], **enabled))
+      _, out = cli("status", runner: fresh_install_runner(SHELL_INFO => "(@a{sv} {},)\n", **enabled))
       assert_includes out, Stockbar::Setup::RELOGIN
 
       _, out = cli("unpin", "EUR=", runner: fresh_install_runner(**enabled))
@@ -60,10 +60,41 @@ class CLITest < Minitest::Test
     in_sandbox do
       install_package_extension
       out = FakeTerminal.new
-      runner = fresh_install_runner(failing: [SHELL_INFO], ENABLED_EXTENSIONS => "['#{Stockbar::UUID}']\n")
+      runner = fresh_install_runner(SHELL_INFO => "(@a{sv} {},)\n", ENABLED_EXTENSIONS => "['#{Stockbar::UUID}']\n")
       Stockbar::CLI.new(["status"], out: out, setup: Stockbar::Setup.new(out: out, runner: runner)).run
 
       assert_includes out.string, "\e[31m#{Stockbar::Setup::RELOGIN}\e[0m"
+    end
+  end
+
+  def test_update_notice_on_status_enable_and_changes
+    in_sandbox do
+      install_package_extension(fingerprint: "a" * 64)
+      runner = fresh_install_runner(ENABLED_EXTENSIONS => "['#{Stockbar::UUID}']\n")
+      [%w[status], %w[enable], %w[scroll 5]].each do |args|
+        status, out = cli(*args, runner: runner)
+        assert_equal 0, status
+        assert_includes out, Stockbar::Setup::UPDATE_RELOGIN
+      end
+      out = FakeTerminal.new
+      Stockbar::CLI.new(["status"], out: out, setup: Stockbar::Setup.new(out: out, runner: runner)).run
+      assert_includes out.string, "\e[31m#{Stockbar::Setup::UPDATE_RELOGIN}\e[0m"
+    end
+  end
+
+  def test_update_notice_reaches_the_editor
+    require "stockbar/ui"
+    in_sandbox do
+      install_package_extension(fingerprint: "a" * 64)
+      runner = fresh_install_runner(ENABLED_EXTENSIONS => "['#{Stockbar::UUID}']\n")
+      editor = Minitest::Mock.new
+      editor.expect(:run, nil)
+      build = lambda do |**options|
+        assert_equal Stockbar::Setup::UPDATE_RELOGIN, options[:warning]
+        editor
+      end
+      Stockbar::UI.stub(:new, build) { assert_equal 0, cli(runner: runner).first }
+      editor.verify
     end
   end
 

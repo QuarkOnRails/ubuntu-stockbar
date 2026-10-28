@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "digest"
 require "fileutils"
 require "json"
 
@@ -29,17 +30,20 @@ module Stockbar
       variant = variant_for(major)
       wrapper = File.read(File.join(SOURCE_DIR, "#{variant}.js"))
       core = %w[layout.js scroll.js core.js].map { |name| File.read(File.join(SOURCE_DIR, name)) }.join("\n")
+      javascript = wrapper.sub(CORE_MARKER) { core }
+      stylesheet = File.read(File.join(SOURCE_DIR, "stylesheet.css"))
       metadata = {
         "uuid" => UUID,
+        "stockbar-fingerprint" => Digest::SHA256.hexdigest(javascript + "\0" + stylesheet),
         "name" => "Stockbar",
         "description" => "Stock quotes from the stockbar CLI in the top bar.",
         "url" => URL,
         "shell-version" => shell_versions(variant, major)
       }
       FileUtils.mkdir_p(dir)
-      File.write(File.join(dir, "extension.js"), wrapper.sub(CORE_MARKER) { core })
+      File.write(File.join(dir, "extension.js"), javascript)
       File.write(File.join(dir, "metadata.json"), "#{JSON.pretty_generate(metadata)}\n")
-      FileUtils.cp(File.join(SOURCE_DIR, "stylesheet.css"), dir)
+      File.write(File.join(dir, "stylesheet.css"), stylesheet)
       variant
     end
   end

@@ -8,6 +8,8 @@ module Stockbar
     # two lines, so it doesn't wrap mid-word in an 80 column terminal
     RELOGIN = "⚠ Log out and back in once so your stocks show up in the top bar.\n" \
               "  GNOME only loads new extensions at login."
+    UPDATE_RELOGIN = "⚠ Stockbar’s extension has been updated.\n" \
+                     "  Log out and back in to load the new version."
     USER_EXTENSIONS_OFF = "! GNOME has all extensions switched off (disable-user-extensions), " \
                           "turn them on in the Extensions app"
 
@@ -54,11 +56,22 @@ module Stockbar
       user_extensions_off? ? [USER_EXTENSIONS_OFF] : []
     end
 
-    # the extension is on, but the running shell hasn't seen it yet: GNOME only looks for new ones at login.
-    # the shell check first, after the relogin it's the only one that runs
-    def relogin_needed?
-      gnome_session? && extension_installed? && !shell_knows_extension? &&
-        gsettings_list("enabled-extensions")&.include?(UUID)
+    def relogin_notice
+      return unless gnome_session?
+
+      path = extension_metadata_path
+      return unless path && gsettings_list("enabled-extensions")&.include?(UUID)
+
+      info = @runner.capture("gdbus", "call", "--session", "--dest", "org.gnome.Shell",
+                             "--object-path", "/org/gnome/Shell",
+                             "--method", "org.gnome.Shell.Extensions.GetExtensionInfo", UUID)
+      return unless info
+      return RELOGIN if info.match?(/\A\(\s*(?:@a\{sv\}\s*)?\{\},\s*\)\s*\z/)
+      return unless info.include?("'uuid': <'#{UUID}'>")
+
+      installed = JSON.parse(File.read(path))["stockbar-fingerprint"]
+      loaded = info[/'stockbar-fingerprint': <'([0-9a-f]{64})'>/, 1]
+      UPDATE_RELOGIN if installed && installed != loaded
     end
 
     private
@@ -86,7 +99,11 @@ module Stockbar
     end
 
     def extension_installed?
-      Paths.extension_dirs.any? { |dir| File.exist?(File.join(dir, UUID, "metadata.json")) }
+      !extension_metadata_path.nil?
+    end
+
+    def extension_metadata_path
+      Paths.extension_dirs.map { |dir| File.join(dir, UUID, "metadata.json") }.find { |path| File.exist?(path) }
     end
 
     # "enabled" or "disabled", empty when the unit doesn't exist or there's no user manager to ask
@@ -94,12 +111,7 @@ module Stockbar
       systemctl_output("is-enabled", SERVICE)
     end
 
-    # false right after apt install: the running shell only looks for extensions at login
-    def shell_knows_extension?
-      @runner.run("gnome-extensions", "info", UUID)
-    end
-
-    # ubuntu sets ubuntu:GNOME. over ssh, on a tty or on another desktop gnome-extensions fails for other reasons
+    # ubuntu sets ubuntu:GNOME. over ssh, on a tty or on another desktop the shell query fails for other reasons
     def gnome_session?
       ENV["XDG_CURRENT_DESKTOP"].to_s.split(":").include?("GNOME")
     end

@@ -262,10 +262,11 @@ module Stockbar
       lines
     end
 
-    # red and on every change until it's done: everyone skips the relogin, and the bar stays empty until then.
+    # red and on every change until the running shell has the installed extension
     # after first_use, which is what switches the extension on
     def relogin_reminder
-      Table.paint(Setup::RELOGIN, :red, color?) if @setup.relogin_needed?
+      notice = @setup.relogin_notice
+      Table.paint(notice, :red, color?) if notice
     end
 
     def remind_relogin

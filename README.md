@@ -28,6 +28,9 @@ Installing it doesn't switch anything on. Add your first stock (see below) and i
 Then **log out and back in once**. GNOME only notices new extensions at login, nobody can do anything about that.
 stockbar keeps reminding you, in red, until you do.
 
+After an update changes the extension, stockbar also reminds you to log out and back in to load it.
+Updates that only change the CLI or background service do not trigger this notice.
+
 ## Getting started
 
 Run
