@@ -70,6 +70,7 @@ function scrollGeometry(scroll) {
         anchor: scroll.anchor(),
         length: scroll.layout.length,
         width: scroll.layout.width,
+        spacing: scroll._views[0].strips[0].get_theme_node().get_length('spacing'),
         playing: scroll._timeline.is_playing(),
         time: GLib.get_monotonic_time() / 1000,
         views: scroll._views.map(({viewport, strips}) => {

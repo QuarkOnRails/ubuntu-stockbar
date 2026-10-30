@@ -2,8 +2,8 @@ stockbar (1.0.0) UNRELEASED; urgency=medium
 
   * Fit stock labels to available panel space while keeping the clock centered.
     Show an overflow indicator for stocks that do not fit.
-  * Add configurable scrolling for the whole watchlist, with speeds 1-10 and
-    pause while the dropdown is open. Keep pinned stocks when scrolling is off.
+  * Add configurable scrolling for pinned stocks, with speeds 1-10 and
+    pause while the dropdown is open.
   * Add scroll controls to the CLI and interactive editor.
   * Remind users to log out and back in after extension code or style updates.
     CLI-only and background-service updates do not trigger the notice.

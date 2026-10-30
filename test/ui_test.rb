@@ -67,6 +67,21 @@ class UITest < Minitest::Test
     end
   end
 
+  def test_pin_choice_keeps_pins_made_elsewhere
+    in_sandbox do
+      Stockbar::Config.load.tap { |config| config.add("AAPL", pinned: true) }.save
+      source = Object.new
+      def source.quotes(*) = Stockbar::CNBC::Result.new(quotes: {}, errors: {})
+      ui = Stockbar::UI.new(out: StringIO.new, source: source, on_change: -> {})
+      ui.instance_variable_set(:@prompt, prompt("\r"))
+      ui.instance_variable_set(:@config, Stockbar::Config.load)
+      # pinned in another editor while this picker is open
+      Stockbar::Config.load.tap { |config| config.add("MSFT", pinned: true) }.save
+      ui.send(:choose_pinned)
+      assert_equal [true, true], Stockbar::Config.load.stocks.map(&:pinned)
+    end
+  end
+
   def test_spinner
     spinner = TTY::Spinner.new("[:spinner] Fetching quotes…", format: :dots, output: StringIO.new, clear: true)
     spinner.auto_spin

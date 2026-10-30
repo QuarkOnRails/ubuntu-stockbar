@@ -254,10 +254,15 @@ def main():
             single = request(screenshot=True)
             validate(single, clock)
             assert single['scroll']['playing'], single
-            # a short loop repeats to fill both views
             assert single['scroll']['width'] == single['room'], single
-            assert all(len(view['labels']) >= single['room'] // single['scroll']['length']
-                       for view in single['scroll']['views']), single
+            # a short loop repeats to fill both views, with no blank edge anywhere in its cycle
+            cycle = request('motion', duration=single['scroll']['length'] / 80 * 1000 + 300)
+            for sample in cycle['samples']:
+                for view in sample['views']:
+                    edges = [view['span'][0], *sorted(x for label in view['labels'] for x in label['span']),
+                             view['span'][1]]
+                    assert all(end - start <= sample['spacing'] + 1
+                               for start, end in zip(edges[::2], edges[1::2])), sample
             quotes(1, long=True, speed=10, total=1)
             long_scroll = request(screenshot=True)
             validate(long_scroll, clock)

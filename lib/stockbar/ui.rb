@@ -124,11 +124,16 @@ module Stockbar
     end
 
     def choose_pinned
+      pinned_before = @config.stocks.select(&:pinned).map(&:symbol)
       # tty-prompt defaults are 1-based positions
       pinned = @config.stocks.each.with_index(1).filter_map { |stock, position| position if stock.pinned }
       symbols = @prompt.multi_select("Pin in the top bar: (space toggles, enter confirms)", stock_choices,
                                      default: pinned, **list_options)
-      save_and_refresh { |config| config.pinned_symbols = symbols }
+      # only the toggles, so pins changed elsewhere while the picker was open stay
+      save_and_refresh do |config|
+        (symbols - pinned_before).each { |symbol| config.pin(symbol, true) }
+        (pinned_before - symbols).each { |symbol| config.pin(symbol, false) }
+      end
     end
 
     def reorder

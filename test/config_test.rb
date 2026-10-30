@@ -51,14 +51,6 @@ class ConfigTest < Minitest::Test
     assert_raises(Stockbar::Error) { config.pin("AAPL", true) }
   end
 
-  def test_pinned_symbols
-    config = build_config
-    %w[AAPL MSFT NVDA].each { |s| config.add(s, pinned: s == "AAPL") }
-    config.pinned_symbols = %w[msft NVDA]
-
-    assert_equal [false, true, true], config.stocks.map(&:pinned)
-  end
-
   def test_move
     config = build_config
     %w[A B C D].each { |s| config.add(s) }

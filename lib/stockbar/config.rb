@@ -78,11 +78,6 @@ module Stockbar
       fetch(symbol).pinned = pinned
     end
 
-    def pinned_symbols=(symbols)
-      wanted = symbols.map { |symbol| self.class.normalize(symbol) }
-      stocks.each { |stock| stock.pinned = wanted.include?(stock.symbol) }
-    end
-
     def move(symbol, index)
       stock = fetch(symbol)
       stocks.delete(stock)
