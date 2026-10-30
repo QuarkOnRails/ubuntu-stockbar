@@ -2,7 +2,7 @@
 
 # stdlib only outside ui.rb: the service runs ruby by absolute path, without rvm or bundler
 module Stockbar
-  VERSION = "1.0.0"
+  VERSION = "1.0.1"
   ROOT = File.expand_path("..", __dir__)
   SERVICE = "stockbar.service"
   UUID = "stockbar@quarkonrails.github.io"

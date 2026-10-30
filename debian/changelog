@@ -1,9 +1,19 @@
+stockbar (1.0.1) UNRELEASED; urgency=medium
+
+  * Scroll only pinned stocks, so unpinning or removing a stock takes it off
+    the top bar. Unpinned stocks stay in the dropdown.
+  * Keep both scroll areas at full width, repeating the stocks when there are
+    only a few.
+  * Keep changes made in another editor or the CLI when the editor saves.
+
+ -- Quark On Rails <quarkXZ@proton.me>  Sat, 31 Oct 2026 00:05:31 +0100
+
 stockbar (1.0.0) UNRELEASED; urgency=medium
 
   * Fit stock labels to available panel space while keeping the clock centered.
     Show an overflow indicator for stocks that do not fit.
-  * Add configurable scrolling for pinned stocks, with speeds 1-10 and
-    pause while the dropdown is open.
+  * Add configurable scrolling for the whole watchlist, with speeds 1-10 and
+    pause while the dropdown is open. Keep pinned stocks when scrolling is off.
   * Add scroll controls to the CLI and interactive editor.
   * Remind users to log out and back in after extension code or style updates.
     CLI-only and background-service updates do not trigger the notice.
