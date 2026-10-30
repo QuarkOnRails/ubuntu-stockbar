@@ -19,13 +19,8 @@ class StockbarScroll {
                 width: 0,
             });
             half._box.add_child(viewport);
-            const strips = [0, 1].map(() => {
-                const strip = new St.BoxLayout({style_class: 'stockbar-box'});
-                for (const item of items)
-                    strip.add_child(createLabel(item.bar_text, `stockbar-label ${directionClass(item)}`, item.stale));
-                viewport.add_child(strip);
-                return strip;
-            });
+            // fit adds the copies the view's width needs
+            const strips = [this._strip(viewport)];
             const mappedId = viewport.connect('notify::mapped', () => this._syncAnimation());
             return {viewport, strips, mappedId};
         });
@@ -63,6 +58,9 @@ class StockbarScroll {
         this.position = index < 0 ? 0 : layout.starts[index] + Math.min(anchor.offset, widths[index] + spacing - 1);
         for (const {viewport, strips} of this._views) {
             viewport.set_size(layout.width, height);
+            while (strips.length < layout.copies)
+                strips.push(this._strip(viewport));
+            strips.splice(layout.copies).forEach(strip => strip.destroy());
             for (const track of strips) {
                 track.get_children().forEach((label, i) => (label.width = widths[i]));
                 track.set_size(layout.length - spacing, height);
@@ -80,9 +78,16 @@ class StockbarScroll {
         const {width, length} = this.layout;
         this._views.forEach(({strips}, side) => {
             const offset = (this.position + side * width) % length;
-            strips[0].translation_x = -offset;
-            strips[1].translation_x = length - offset;
+            strips.forEach((strip, i) => (strip.translation_x = i * length - offset));
         });
+    }
+
+    _strip(viewport) {
+        const strip = new St.BoxLayout({style_class: 'stockbar-box'});
+        for (const item of this._items)
+            strip.add_child(createLabel(item.bar_text, `stockbar-label ${directionClass(item)}`, item.stale));
+        viewport.add_child(strip);
+        return strip;
     }
 
     _syncAnimation() {

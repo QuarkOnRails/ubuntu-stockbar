@@ -191,15 +191,17 @@ def main():
             validate(enabled, clock)
             assert enabled['fit'] == before['fit'], (enabled, before)
 
-            # unpinned stocks must also reach the clipped viewports
-            quotes(1, speed=10)
+            # only pinned stocks scroll, unpinned ones stay in the dropdown
+            quotes(6, speed=10)
             scrolling = request(screenshot=True)
             validate(scrolling, clock)
             assert scrolling['scroll']['playing'], scrolling
+            assert scrolling['scroll']['width'] == scrolling['room'], scrolling
+            assert scrolling['menuRows'] == 9, scrolling
             cycle = request('motion', duration=scrolling['scroll']['length'] / 80 * 1000 + 300)
             seen = {label['symbol'] for sample in cycle['samples'] for view in sample['views']
                     for label in view['labels']}
-            assert seen == {'AAPL', 'MSFT', 'NVDA', 'TSLA', 'S&P 500', 'BTC', 'KO', 'SAP', 'EUR/USD'}, seen
+            assert seen == {'AAPL', 'MSFT', 'NVDA', 'TSLA', 'S&P 500', 'BTC'}, seen
             assert cycle['finalFits'] - cycle['fits'] <= 2, cycle
             for sample in cycle['samples']:
                 assert sample['width'] == scrolling['scroll']['width'], sample
@@ -215,7 +217,7 @@ def main():
             motion = request('motion', duration=400)
             assert len({sample['position'] for sample in motion['samples']}) == 1, motion
             # cache refresh and a speed change keep the same stock and offset while paused
-            quotes(1, speed=5, price='$12,345.67', reverse=True)
+            quotes(6, speed=5, price='$12,345.67', reverse=True)
             refreshed = request()
             old_anchor, new_anchor = paused['scroll']['anchor'], refreshed['scroll']['anchor']
             assert new_anchor['symbol'] == old_anchor['symbol'], (new_anchor, old_anchor)
@@ -240,25 +242,36 @@ def main():
             validate(request('text-scale', scale=args.scale), clock)
             assert not request('disable')['enabled']
             validate(request('enable'), clock)
+            # nothing pinned shows the placeholder, even while scrolling is on
+            quotes(0, speed=10)
+            unpinned = request()
+            validate(unpinned, clock)
+            assert unpinned['scroll'] is None, unpinned
+            assert unpinned['halves'][1]['labels'][0]['text'] == 'Stocks', unpinned
+            assert unpinned['menuRows'] == 9, unpinned
 
-            quotes(0, speed=10, total=1)
+            quotes(1, speed=10, total=1)
             single = request(screenshot=True)
             validate(single, clock)
             assert single['scroll']['playing'], single
-            assert 2 * single['scroll']['width'] <= single['scroll']['length'], single
-            quotes(0, long=True, speed=10, total=1)
+            # a short loop repeats to fill both views
+            assert single['scroll']['width'] == single['room'], single
+            assert all(len(view['labels']) >= single['room'] // single['scroll']['length']
+                       for view in single['scroll']['views']), single
+            quotes(1, long=True, speed=10, total=1)
             long_scroll = request(screenshot=True)
             validate(long_scroll, clock)
             assert long_scroll['scroll']['length'] > 2 * long_scroll['scroll']['width'], long_scroll
-            quotes(0, speed=10, total=0)
-            empty = request()
-            validate(empty, clock)
-            assert empty['scroll'] is None, empty
             quotes(1, speed=0)
             stopped = request()
             validate(stopped, clock)
             assert stopped['scroll'] is None, stopped
             assert stopped['fit']['shown'] == 1, stopped
+            assert stopped['halves'][1]['labels'][0]['text'] == 'AAPL ▲ 1.23% $231.78', stopped
+            quotes(0, speed=10, total=0)
+            empty = request()
+            validate(empty, clock)
+            assert empty['scroll'] is None, empty
             print(f'{args.size} scale={args.scale} rtl={args.rtl}: scrolling, pause, recovery and stop passed', flush=True)
             def notice():
                 return subprocess.check_output(

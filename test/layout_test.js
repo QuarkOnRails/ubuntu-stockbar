@@ -71,8 +71,11 @@ const loop = scrollLayout([40.2, 90, 400], 100, 14);
 assert.deepEqual(Array.from(loop.starts), [0, 55, 159]);
 assert.equal(loop.length, 573);
 assert.equal(loop.width, 100);
-assert.equal(scrollLayout([40], 100, 14).width, 27);
-assert.equal(scrollLayout([], 100, 14).width, 0);
+assert.equal(loop.copies, 2);
+// a short loop repeats to fill the whole room
+const short = scrollLayout([40], 100, 14);
+assert.equal(short.width, 100);
+assert.equal(short.copies, 3);
 assert.equal(scrollLayout([40], -10, 14).width, 0);
 assert.equal(scrollAdvance(0, 0, 1000, 100), 0);
 assert.equal(scrollAdvance(0, 1, 1000, 100), 8);

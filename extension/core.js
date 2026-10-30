@@ -188,14 +188,13 @@ class Stockbar {
         this._scroll = null;
         for (const half of this._halves)
             half._box.destroy_all_children();
-        const allItems = this._data?.items ?? [];
+        const items = (this._data?.items ?? []).filter(item => item.pinned);
         const speed = this._data?.scroll_speed ?? 0;
-        if (speed > 0 && allItems.length > 0) {
-            this._scroll = new StockbarScroll(this._halves, allItems, speed, anchor);
+        if (speed > 0 && items.length > 0) {
+            this._scroll = new StockbarScroll(this._halves, items, speed, anchor);
             this._fit();
             return;
         }
-        const items = allItems.filter(item => item.pinned);
         this._labels = items.map(item =>
             createLabel(item.bar_text, `stockbar-label ${directionClass(item)}`, item.stale));
         if (items.length === 0)

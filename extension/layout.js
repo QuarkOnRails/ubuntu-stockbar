@@ -13,7 +13,9 @@ function scrollLayout(widths, room, spacing) {
         starts.push(length);
         length += Math.ceil(width) + spacing;
     }
-    return {starts, length, width: Math.max(0, Math.min(Math.floor(room), Math.floor(length / 2)))};
+    const width = Math.max(0, Math.floor(room));
+    // a view can start anywhere in the loop, so it needs a copy more than its width covers
+    return {starts, length, width, copies: Math.ceil(width / length) + 1};
 }
 
 function scrollAdvance(position, speed, milliseconds, length) {

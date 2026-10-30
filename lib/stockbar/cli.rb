@@ -11,11 +11,11 @@ module Stockbar
         stockbar search QUERY          search by company name or ticker
         stockbar add QUERY [--pin]     add a stock (offers search results if QUERY isn't a ticker)
         stockbar remove SYMBOL...      remove stocks
-        stockbar pin SYMBOL...         show stocks in the static top bar
-        stockbar unpin SYMBOL...       remove stocks from the static top bar
+        stockbar pin SYMBOL...         show stocks in the top bar
+        stockbar unpin SYMBOL...       remove stocks from the top bar
         stockbar refresh               fetch quotes now
         stockbar interval [SECONDS]    show or set how often quotes refresh (default 20)
-        stockbar scroll [SPEED]        scroll the entire watchlist at speed 1–10 (0 = off, default)
+        stockbar scroll [SPEED]        scroll the pinned stocks at speed 1–10 (0 = off, default)
         stockbar status                service, extension and data status
         stockbar enable                turn on the top-bar extension and the background service
                                        (your first watchlist change does this by itself)
@@ -130,7 +130,7 @@ module Stockbar
       config = Config.load
       symbols.each { |symbol| config.pin(symbol, pinned) }
       save_and_refresh(config, "#{symbol_list(symbols)} now #{pinned ? 'pinned' : 'unpinned'} " \
-                               "for the static top bar.")
+                               "for the top bar.")
     end
 
     def refresh

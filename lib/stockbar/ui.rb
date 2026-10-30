@@ -80,7 +80,7 @@ module Stockbar
         menu.choice "Add a stock", :add
         unless @config.stocks.empty?
           menu.choice "Remove stocks", :remove
-          menu.choice "Choose stocks for the static top bar", :choose_pinned
+          menu.choice "Choose stocks for the top bar", :choose_pinned
           menu.choice "Reorder", :reorder
           menu.choice "Refresh now", :refresh
         end
@@ -110,26 +110,25 @@ module Stockbar
       return if picked == :cancel
 
       first_pin = @config.stocks.none?(&:pinned)
-      pinned = @prompt.yes?("Pin #{picked.symbol} in the static top bar?") { |q| q.default(first_pin) }
-      @config.add(picked.symbol, name: picked.name, pinned: pinned)
-      save_and_refresh "Added #{picked.symbol}."
+      pinned = @prompt.yes?("Pin #{picked.symbol} in the top bar?") { |q| q.default(first_pin) }
+      save_and_refresh("Added #{picked.symbol}.") do |config|
+        config.add(picked.symbol, name: picked.name, pinned: pinned)
+      end
     end
 
     def remove
       symbols = @prompt.multi_select("Remove which? (space marks, enter confirms)", stock_choices, **list_options)
       return if symbols.empty?
 
-      symbols.each { |symbol| @config.remove(symbol) }
-      save_and_refresh "Removed #{symbols.join(', ')}."
+      save_and_refresh("Removed #{symbols.join(', ')}.") { |config| symbols.each { |symbol| config.remove(symbol) } }
     end
 
     def choose_pinned
       # tty-prompt defaults are 1-based positions
       pinned = @config.stocks.each.with_index(1).filter_map { |stock, position| position if stock.pinned }
-      symbols = @prompt.multi_select("Pin in the static top bar: (space toggles, enter confirms)", stock_choices,
+      symbols = @prompt.multi_select("Pin in the top bar: (space toggles, enter confirms)", stock_choices,
                                      default: pinned, **list_options)
-      @config.pinned_symbols = symbols
-      save_and_refresh
+      save_and_refresh { |config| config.pinned_symbols = symbols }
     end
 
     def reorder
@@ -140,27 +139,25 @@ module Stockbar
       end
       # 1-based, same as choose_pinned's defaults
       index = @prompt.select("Move #{symbol} to:", positions, default: current + 1, **list_options)
-      @config.move(symbol, index)
-      save_and_refresh
+      save_and_refresh { |config| config.move(symbol, index) }
     end
 
     def interval
-      @config.refresh_interval = @prompt.ask("Seconds between updates (at least #{Config::MIN_INTERVAL}):",
-                                             default: @config.refresh_interval.to_s) do |q|
+      seconds = @prompt.ask("Seconds between updates (at least #{Config::MIN_INTERVAL}):",
+                            default: @config.refresh_interval.to_s) do |q|
         q.validate(/\A\d+\z/, "Enter a whole number of seconds")
         q.convert(:int)
       end
-      @config.save
+      save { |config| config.refresh_interval = seconds }
       @on_change.call
     end
 
     def scroll
-      @config.scroll_speed = @prompt.ask("Scroll speed (0 = off, 10 = fastest):",
-                                         default: @config.scroll_speed.to_s) do |q|
+      speed = @prompt.ask("Scroll speed (0 = off, 10 = fastest):", default: @config.scroll_speed.to_s) do |q|
         q.validate(/\A(?:[0-9]|10)\z/, "Enter a whole number from 0 to 10")
         q.convert(:int)
       end
-      @config.save
+      save { |config| config.scroll_speed = speed }
       @on_change.call
     end
 
@@ -168,11 +165,18 @@ module Stockbar
       @report = spin("Fetching quotes") { Updater.new(@config, source: @source).run }
     end
 
-    def save_and_refresh(message = nil)
-      @config.save
+    def save_and_refresh(message = nil, &edit)
+      save(&edit)
       refresh
       @on_change.call
       @notice = message
+    end
+
+    # re-read first, another editor or the CLI may have changed the config while a prompt was open
+    def save
+      @config = Config.load
+      yield @config
+      @config.save
     end
 
     # tty-prompt redraws a list by moving the cursor up, which stops at the banner, so the list has to fit
